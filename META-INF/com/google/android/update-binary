@@ -1,121 +1,33 @@
 #!/sbin/sh
-# Magisk Module Update Binary
-# Based on Magisk Module Template
 
-TMPDIR=/dev/tmp
-MOUNTPATH=/dev/magisk_img
-IMGNAME=magisk_patched.img
+#################
+# Initialization
+#################
 
-# Default permissions
 umask 022
 
-# Display UI messages
-ui_print() {
-  if [ "$BOOTMODE" = true ]; then
-    echo "$1"
-  else
-    echo -e "ui_print $1\nui_print" >> /proc/self/fd/$OUTFD
-  fi
-}
+# echo before loading util_functions
+ui_print() { echo "$1"; }
 
-# Get value from installation zip
-get_var() {
-  unzip -p "$ZIP" "$1" 2>/dev/null
-}
-
-# Extract a file from installation zip
-extract() {
-  unzip -p "$ZIP" "$1" > "$2"
-}
-
-# The actual installation process
-install() {
-  ui_print "- Extracting module files"
-  mkdir -p $MODPATH
-
-  # Extract files - default Magisk behavior is to extract the entire zip to $MODPATH
-  unzip -o "$ZIP" -d $MODPATH >&2
-
-  # Remove unnecessary META-INF directory
-  rm -rf $MODPATH/META-INF
-
-  # Set permissions
-  ui_print "- Setting permissions"
-  chmod 755 $MODPATH/system/bin/hid-gadget
-  chmod 755 $MODPATH/system/bin/hid-keyboard
-  chmod 755 $MODPATH/system/bin/hid-mouse
-  chmod 755 $MODPATH/system/bin/hid-consumer
-  chmod 755 $MODPATH/system/bin/hid-setup
-  
-  set_perm_recursive $MODPATH 0 0 0755 0644
-  set_perm_recursive $MODPATH/system/bin 0 2000 0755 0755
-}
-
-# Set the Magisk version
 require_new_magisk() {
-  ui_print "**********************************"
-  ui_print " Please install Magisk v20.0+! "
-  ui_print "**********************************"
+  ui_print "*******************************"
+  ui_print " Please install Magisk v20.4+! "
+  ui_print "*******************************"
   exit 1
 }
 
-# Set permissions on a file or directory recursively
-set_perm_recursive() {
-  local DIRECTORY="$1"
-  local OWNER="$2"
-  local GROUP="$3"
-  local DIRPERM="$4"
-  local FILEPERM="$5"
-  
-  find "$DIRECTORY" -type d -exec chmod "$DIRPERM" {} \;
-  find "$DIRECTORY" -type f -exec chmod "$FILEPERM" {} \;
-  chown -R "$OWNER":"$GROUP" "$DIRECTORY"
-}
+#########################
+# Load util_functions.sh
+#########################
 
-# Set permissions on a single file
-set_perm() {
-  chmod "$3" "$1"
-  chown "$2" "$1"
-}
-
-# Detect Magisk version
-setup_environment() {
-  if [ -d /data/adb/magisk ]; then
-    MAGISKBIN=/data/adb/magisk
-  elif [ -d /data/magisk ]; then
-    MAGISKBIN=/data/magisk
-  else
-    require_new_magisk
-  fi
-
-  # Magisk v20+ variables
-  MODPATH="$MOUNTPATH/.tmp/$MODID"
-  MAGISK=true
-}
-
-# Start script
 OUTFD=$2
 ZIPFILE=$3
 
-# Detect bootmode
-ps | grep zygote | grep -v grep >/dev/null && BOOTMODE=true || BOOTMODE=false
-$BOOTMODE || ps -A 2>/dev/null | grep zygote | grep -v grep >/dev/null && BOOTMODE=true
+mount /data 2>/dev/null
 
-# Load parameters
-MAGISKBIN=/data/adb/magisk
-MOUNTPATH=/data/adb/modules
-
-# Extract common files
+[ -f /data/adb/magisk/util_functions.sh ] || require_new_magisk
 . /data/adb/magisk/util_functions.sh
+[ $MAGISK_VER_CODE -lt 20400 ] && require_new_magisk
 
-# Extract module ID from module.prop
-MODID=$(get_var module.prop | grep "^id=" | cut -d= -f2)
-
-# Run installation
-mount -o rw,remount /data >/dev/null
-mkdir -p $MOUNTPATH/$MODID
-setup_environment
-ZIP=$ZIPFILE
-install
-ui_print "- Done"
+install_module
 exit 0
