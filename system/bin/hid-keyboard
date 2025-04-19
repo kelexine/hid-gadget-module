@@ -1,0 +1,13 @@
+#!/system/bin/sh
+# hid-keyboard - Wrapper for HID keyboard gadget functionality
+
+# Check if we have at least one argument
+if [ $# -lt 1 ]; then
+    echo "Usage: hid-keyboard [--hold] [--release] [modifiers] sequence"
+    echo "  modifiers: CTRL, ALT, SHIFT, GUI (can be combined with -)"
+    echo "  special keys: F1-F12, ESC, TAB, etc."
+    exit 1
+fi
+
+# Just forward all arguments to hid-gadget
+exec hid-gadget keyboard "$@"

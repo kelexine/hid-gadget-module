@@ -1,0 +1,21 @@
+# HID Gadget init service configuration
+
+on post-fs-data
+    # Ensure proper permissions for scripts
+    chmod 0755 /system/bin/hid-setup
+    chmod 0755 /system/bin/hid-gadget
+    chmod 0755 /system/bin/hid-keyboard
+    chmod 0755 /system/bin/hid-mouse
+    chmod 0755 /system/bin/hid-consumer
+
+# Setup HID gadget during boot
+service hidgadget_setup /system/bin/hid-setup
+    class core
+    user root
+    group root system
+    oneshot
+    disabled
+
+# Start the service once the system is booted
+on property:sys.boot_completed=1
+    start hidgadget_setup

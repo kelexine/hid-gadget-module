@@ -1,0 +1,7 @@
+id=hid-gadget
+name=HID Gadget
+version=
+versionCode=
+author=@kelexine GitHub
+description=USB HID Gadget emulation for keyboard, mouse, and consumer control
+updateJson=https://raw.githubusercontent.com/kelexine/hid-gadget-module/main/update.json

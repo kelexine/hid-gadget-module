@@ -1,0 +1,12 @@
+#!/system/bin/sh
+# hid-consumer - Wrapper for HID consumer control gadget functionality
+
+# Check if we have at least one argument
+if [ $# -lt 1 ]; then
+    echo "Usage: hid-consumer [action]"
+    echo "  actions: PLAY, PAUSE, MUTE, VOL+, VOL-, etc."
+    exit 1
+fi
+
+# Forward all arguments to hid-gadget
+exec hid-gadget consumer "$@"

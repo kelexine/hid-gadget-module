@@ -1,0 +1,17 @@
+#!/system/bin/sh
+# hid-mouse - Wrapper for HID mouse gadget functionality
+
+# Check if we have at least one argument
+if [ $# -lt 1 ]; then
+    echo "Usage: hid-mouse [action] [parameters]"
+    echo "  move X Y       - Move mouse by X,Y relative units"
+    echo "  click [button] - Click button (left,right,middle)"
+    echo "  doubleclick    - Double click left button"
+    echo "  down [button]  - Press and hold button"
+    echo "  up [button]    - Release held button"
+    echo "  scroll X Y     - Scroll X (horizontal) Y (vertical) units"
+    exit 1
+fi
+
+# Forward all arguments to hid-gadget
+exec hid-gadget mouse "$@"
