@@ -17,7 +17,7 @@ service hidgadget_setup /system/bin/hid-setup
     oneshot
     disabled
     # Explicitly assign an SELinux context for this service
-    # This context must be defined and granted permissions in a sepolicy.te file
+    # This context must be defined and granted permissions in a sepolicy.rule file
     seclabel u:r:magisk_hidgadget_service:s0
 
 # Start the service once the system is booted
