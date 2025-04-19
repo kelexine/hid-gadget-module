@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.2 (2025-04-19 19:46)
+
+- Automated entry for v1.2 build
+
+Commit Message: Automated build: v1.2
+
+Changes Summary:
+```
+ CHANGELOG.md         | 15 +++++++++++++++
+ system/bin/hid-setup | 48 +++++++++++++++++++++++++++++++++---------------
+ 2 files changed, 48 insertions(+), 15 deletions(-)
+```
+
+
 ## v1.2 (2025-04-19 17:58)
 
 - Automated entry for v1.2 build

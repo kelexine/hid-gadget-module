@@ -2,6 +2,7 @@
 
 on post-fs-data
     # Ensure proper permissions for scripts
+    # These are likely redundant with customize.sh but harmless
     chmod 0755 /system/bin/hid-setup
     chmod 0755 /system/bin/hid-gadget
     chmod 0755 /system/bin/hid-keyboard
@@ -15,6 +16,9 @@ service hidgadget_setup /system/bin/hid-setup
     group root system
     oneshot
     disabled
+    # Explicitly assign an SELinux context for this service
+    # This context must be defined and granted permissions in a sepolicy.te file
+    seclabel u:r:magisk_hidgadget_service:s0
 
 # Start the service once the system is booted
 on property:sys.boot_completed=1

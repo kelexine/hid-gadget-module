@@ -1,0 +1,73 @@
+# magisk_hidgadget_service SELinux Policy
+
+# This file defines the custom SELinux policy for the hid-setup service.
+# It should be placed at the root of the Magisk module directory as 'sepolicy.te'.
+# Magisk loads policy files from module roots and compiles/loads them into the kernel.
+
+# 1. Declare the custom domain/type for the hid-setup service process.
+# This is the SELinux context type assigned to the service process via the 'seclabel' directive in init.hidgadget.rc.
+# 'domain' is the attribute for process types.
+type magisk_hidgadget_service, domain;
+type magisk_hidgadget_service_exec, file_type, exec_type, vendor_file_type; # Adjust file_type attribute as needed (e.g., system_file_type, magisk_file_type)
+
+# You will typically need rules allowing the init process to transition into your new domain
+# and execute the script file. Magisk handles some of this boilerplate depending on version/template,
+# but explicit rules might look something like this (often handled by Magisk policy macros):
+# allow init magisk_hidgadget_service_exec:file { execute read open getattr };
+# domain_auto_trans(init, magisk_hidgadget_service_exec, magisk_hidgadget_service)
+
+
+# --- 2. Grant Permissions needed for ConfigFS access ---
+# Grant the 'magisk_hidgadget_service' domain permissions on the 'configfs' type.
+# The target context type 'configfs' applies to /config/usb_gadget/ based on 'ls -Z' output.
+
+# Allow the service to manage directories (like 'hid', 'configs/c.1', 'functions', etc.) inside /config/usb_gadget
+# Permissions include:
+# create: for mkdir hid, mkdir configs/c.1, mkdir functions, mkdir strings, mkdir configs/c.1/strings/0x409 etc.
+# add_name: for adding the names 'hid', 'c.1', 'functions', 'strings' etc. within their parent directories
+# remove_name: for removing names during cleanup
+# rmdir: for removing directories during cleanup
+# search: to traverse directories
+# write: needed for writing to directory attributes or properties in configfs
+allow magisk_hidgadget_service configfs:dir { create add_name remove_name rmdir search write };
+
+# Allow the service to create symbolic links (for linking functions to configurations)
+# inside /config/usb_gadget/configs/c.1/
+allow magisk_hidgadget_service configfs:lnk_file { create };
+
+# Allow the service to manage files inside /config/usb_gadget and its subdirectories
+# (like idVendor, idProduct, serialnumber, manufacturer, product, configuration, MaxPower, report_length, report_desc, UDC)
+# Permissions include:
+# create: for files like report_desc
+# write: for writing values (like IDs, strings, binary descriptors, UDC name)
+# read: for reading values (less common in setup, but potentially useful for verification)
+# open: to open the files for read/write
+# getattr: to get file attributes (like permissions, though less critical in configfs)
+# setattr: to set file attributes (like permissions/ownership, though less common in configfs files themselves)
+allow magisk_hidgadget_service configfs:file { create write read open getattr setattr };
+
+
+# --- 3. Other potential permissions needed ---
+# Your script creates character device nodes /dev/hidgX (major 243) and sets their permissions (chmod 666).
+# Magisk might handle the creation and initial labeling of these nodes via its own policy or udev rules.
+# However, if your script's 'mknod' or 'chmod' commands are denied, you'll need specific rules.
+# These nodes typically have the 'device' class and a type like 'device' or 'hidg_device' (check logs!).
+# Check your logs for denials on 'device:chr_file' or '<hidg_device_type>:chr_file' if mknod/chmod fails.
+# Example rules if needed (uncomment and adjust target type based on denial logs):
+# allow magisk_hidgadget_service device:chr_file { create_file_perms }; # create_file_perms = { create read write open getattr setattr }
+# allow magisk_hidgadget_service hidg_device:chr_file { create_file_perms }; # Example if a specific hidg_device type exists
+# If only setattr is denied (for chmod 666):
+# allow magisk_hidgadget_service device:chr_file { setattr };
+# allow magisk_hidgadget_service hidg_device:chr_file { setattr };
+
+
+# Your script mounts configfs if needed (less likely for /config, but check logs for 'filesystem:mount' denial)
+# allow magisk_hidgadget_service self:filesystem mount;
+
+
+# Note: This policy is a starting point based on the script's actions and observed contexts ('configfs').
+# It grants permissions on the 'configfs' type, which applies to /config/usb_gadget and items created directly within it.
+# You might need additional rules if configfs creates sub-objects with different, more specific types,
+# or if you encounter denials related to device node creation (/dev) or other system interactions.
+# If you encounter denials, analyze them using 'audit2allow' or manually determine the required permissions
+# and add them to this file.
