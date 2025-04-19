@@ -1,5 +1,31 @@
 # Changelog
 
+## v1.2.1 (2025-04-19 21:09)
+
+- Automated entry for v1.2.1 build
+
+Commit Message: Automated build: v1.2
+
+Changes Summary:
+```
+ CHANGELOG.md | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+```
+
+
+## v1.2.0 (2025-04-19 21:06)
+
+- Automated entry for v1.2.0 build
+
+Commit Message: Automated build: v1.2
+
+Changes Summary:
+```
+ CHANGELOG.md | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+```
+
+
 ## v1.2 (2025-04-19 20:17)
 
 - Automated entry for v1.2 build
