@@ -11,13 +11,26 @@ generate_serial() {
 }
 
 # Create directory for gadget
-CONFIGFS_HOME="/sys/kernel/config"
+# Use /config as the standard Android configfs mount point
+CONFIGFS_HOME="/config"
 GADGET_DIR="$CONFIGFS_HOME/usb_gadget/hid"
 
-# Check if configfs is mounted
+# Check if configfs is mounted at /config
+# Android usually mounts configfs at /config early in boot
+# If it's not mounted, try mounting it (though this is less common for /config itself)
 if ! mount | grep -q "configfs on $CONFIGFS_HOME"; then
-    mount -t configfs none "$CONFIGFS_HOME"
+    # Try mounting configfs explicitly at /config
+    mount -t configfs none "$CONFIGFS_HOME" 2>/dev/null || {
+        # If mounting at /config fails, fall back to checking /sys/kernel/config
+        # And try mounting there if needed
+        CONFIGFS_HOME="/sys/kernel/config"
+        GADGET_DIR="$CONFIGFS_HOME/usb_gadget/hid"
+        if ! mount | grep -q "configfs on $CONFIGFS_HOME"; then
+             mount -t configfs none "$CONFIGFS_HOME"
+        fi
+    }
 fi
+
 
 # Remove any existing gadget with the same name
 if [ -d "$GADGET_DIR" ]; then
@@ -25,7 +38,7 @@ if [ -d "$GADGET_DIR" ]; then
     if [ -f "$GADGET_DIR/UDC" ]; then
         echo "" > "$GADGET_DIR/UDC"
     fi
-    
+
     # Remove functions
     for func in "$GADGET_DIR/functions/"*; do
         if [ -d "$func" ]; then
@@ -33,16 +46,19 @@ if [ -d "$GADGET_DIR" ]; then
             rm -f "$GADGET_DIR/configs/c.1/$func_name"
         fi
     done
-    
+
     # Clean up
     rmdir "$GADGET_DIR/configs/c.1/strings/0x409" 2>/dev/null || true
     rmdir "$GADGET_DIR/configs/c.1" 2>/dev/null || true
-    rmdir "$GADGET_DIR/functions/"* 2>/dev/null || true
+    rmdir "$GADGET_DIR/functions/hid.usb0" 2>/dev/null || true # Specific function cleanup
+    rmdir "$GADGET_DIR/functions/hid.usb1" 2>/dev/null || true # Specific function cleanup
+    rmdir "$GADGET_DIR/functions/hid.usb2" 2>/dev/null || true # Specific function cleanup
     rmdir "$GADGET_DIR/strings/0x409" 2>/dev/null || true
     rmdir "$GADGET_DIR" 2>/dev/null || true
 fi
 
 # Create gadget directory
+# This is the step that failed with "Out of memory"
 mkdir -p "$GADGET_DIR"
 
 # Set USB device properties
@@ -63,32 +79,32 @@ echo 500 > "$GADGET_DIR/configs/c.1/MaxPower"
 
 # Create keyboard function
 mkdir -p "$GADGET_DIR/functions/hid.usb0"
-echo 1 > "$GADGET_DIR/functions/hid.usb0/protocol"  # Keyboard
-echo 1 > "$GADGET_DIR/functions/hid.usb0/subclass"
+echo 1 > "$GADGET_DIR/functions/hid.usb0/protocol"  # Keyboard (Boot Protocol)
+echo 1 > "$GADGET_DIR/functions/hid.usb0/subclass"  # Boot Interface Subclass
 echo 8 > "$GADGET_DIR/functions/hid.usb0/report_length"
 # Standard keyboard report descriptor
 echo -ne "\x05\x01\x09\x06\xa1\x01\x05\x07\x19\xe0\x29\xe7\x15\x00\x25\x01\x75\x01\x95\x08\x81\x02\x95\x01\x75\x08\x81\x03\x95\x05\x75\x01\x05\x08\x19\x01\x29\x05\x91\x02\x95\x01\x75\x03\x91\x03\x95\x06\x75\x08\x15\x00\x25\x65\x05\x07\x19\x00\x29\x65\x81\x00\xc0" > "$GADGET_DIR/functions/hid.usb0/report_desc"
 
 # Create mouse function
 mkdir -p "$GADGET_DIR/functions/hid.usb1"
-echo 2 > "$GADGET_DIR/functions/hid.usb1/protocol"  # Mouse
-echo 1 > "$GADGET_DIR/functions/hid.usb1/subclass"
+echo 2 > "$GADGET_DIR/functions/hid.usb1/protocol"  # Mouse (Boot Protocol)
+echo 1 > "$GADGET_DIR/functions/hid.usb1/subclass"  # Boot Interface Subclass
 echo 4 > "$GADGET_DIR/functions/hid.usb1/report_length"
 # Standard mouse report descriptor with scroll
 echo -ne "\x05\x01\x09\x02\xa1\x01\x09\x01\xa1\x00\x05\x09\x19\x01\x29\x03\x15\x00\x25\x01\x95\x03\x75\x01\x81\x02\x95\x01\x75\x05\x81\x03\x05\x01\x09\x30\x09\x31\x15\x81\x25\x7f\x75\x08\x95\x02\x81\x06\x09\x38\x95\x01\x81\x06\xc0\xc0" > "$GADGET_DIR/functions/hid.usb1/report_desc"
 
 # Create consumer control function
 mkdir -p "$GADGET_DIR/functions/hid.usb2"
-echo 0 > "$GADGET_DIR/functions/hid.usb2/protocol"  # None
-echo 0 > "$GADGET_DIR/functions/hid.usb2/subclass"
+echo 0 > "$GADGET_DIR/functions/hid.usb2/protocol"  # None (Report Protocol)
+echo 0 > "$GADGET_DIR/functions/hid.usb2/subclass"  # None
 echo 2 > "$GADGET_DIR/functions/hid.usb2/report_length"
 # Consumer control report descriptor
 echo -ne "\x05\x0c\x09\x01\xa1\x01\x15\x00\x25\x01\x09\x30\x09\xe9\x09\xea\x09\xe2\x09\xb0\x09\xb1\x09\xb3\x09\xb4\x09\xb5\x09\xb6\x09\xb7\x09\xb8\x09\xcd\x09\x83\x09\x84\x09\x85\x09\x86\x09\x87\x09\x88\x09\x89\x09\x8a\x09\x8b\x09\x8c\x09\x01\x09\x02\x09\x03\x09\x04\x09\x05\x09\x06\x09\x07\x09\x08\x09\x09\x09\x0a\x09\x0b\x09\x0c\x09\x0d\x09\x0e\x09\x0f\x09\x10\x09\x11\x09\x12\x09\x13\x09\x14\x09\x15\x09\x16\x09\x17\x09\x18\x09\x19\x09\x1a\x09\x1b\x09\x1c\x09\x1d\x09\x1e\x09\x1f\x09\x20\x09\x21\x09\x22\x09\x23\x09\x24\x09\x25\x09\x26\x09\x27\x09\x28\x09\x29\x09\x2a\x09\x2b\x09\x2c\x09\x2d\x09\x2e\x09\x2f\x09\x30\x09\x31\x09\x32\x09\x33\x09\x34\x09\x35\x09\x36\x09\x37\x09\x38\x09\x39\x09\x3a\x09\x3b\x09\x3c\x09\x3d\x09\x3e\x09\x3f\x09\x40\x09\x41\x09\x42\x09\x43\x09\x44\x09\x45\x09\x46\x09\x47\x09\x48\x09\x49\x09\x4a\x09\x4b\x09\x4c\x09\x4d\x09\x4e\x09\x4f\x09\x50\x09\x51\x09\x52\x09\x53\x09\x54\x09\x55\x09\x56\x09\x57\x09\x58\x09\x59\x09\x5a\x09\x5b\x09\x5c\x09\x5d\x09\x5e\x09\x5f\x09\x60\x09\x61\x09\x62\x09\x63\x09\x64\x09\x65\x09\x66\x09\x67\x09\x68\x09\x69\x09\x6a\x09\x6b\x09\x6c\x09\x6d\x09\x6e\x09\x6f\x09\x70\x09\x71\x09\x72\x09\x73\x09\x74\x09\x75\x09\x76\x09\x77\x09\x78\x09\x79\x09\x7a\x09\x7b\x09\x7c\x09\x7d\x09\x7e\x09\x7f\x75\x10\x95\x01\x81\x00\xc0" > "$GADGET_DIR/functions/hid.usb2/report_desc"
 
 # Link functions to configuration
-ln -s "$GADGET_DIR/functions/hid.usb0" "$GADGET_DIR/configs/c.1/hid.usb0"
-ln -s "$GADGET_DIR/functions/hid.usb1" "$GADGET_DIR/configs/c.1/hid.usb1"
-ln -s "$GADGET_DIR/functions/hid.usb2" "$GADGET_DIR/configs/c.1/hid.usb2"
+ln -s "$GADGET_DIR/functions/hid.usb0" "$GADGET_DIR/configs/c.1/hid.usb0" # Keyboard
+ln -s "$GADGET_DIR/functions/hid.usb1" "$GADGET_DIR/configs/c.1/hid.usb1" # Mouse
+ln -s "$GADGET_DIR/functions/hid.usb2" "$GADGET_DIR/configs/c.1/hid.usb2" # Consumer Control
 
 # Find the first available UDC
 for UDC in /sys/class/udc/*; do
@@ -100,6 +116,8 @@ for UDC in /sys/class/udc/*; do
 done
 
 # Create device nodes
+# These should ideally be created by udev/devd based on kernel events,
+# but manual creation is sometimes necessary on Android.
 mkdir -p /dev
 mknod /dev/hidg0 c 243 0  # Keyboard
 mknod /dev/hidg1 c 243 1  # Mouse
