@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.2 (2025-04-19 20:17)
+
+- Automated entry for v1.2 build
+
+Commit Message: Automated build: v1.2
+
+Changes Summary:
+```
+ CHANGELOG.md                      |  14 +++++
+ customize.sh                      | 122 +++++++++++++++++++++++++++-----------
+ sepolicy.te (new)                 |  73 +++++++++++++++++++++++
+ system/etc/init/init.hidgadget.rc |   4 ++
+ 4 files changed, 178 insertions(+), 35 deletions(-)
+```
+
+
 ## v1.2 (2025-04-19 19:46)
 
 - Automated entry for v1.2 build
