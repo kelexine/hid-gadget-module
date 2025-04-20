@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.3.0 (2025-04-20 05:36)
+
+- Automated entry for v1.3.0 build
+
+Commit Message: Automated build: v1.2.1\n\nChanges:\n\n
+
+Changes Summary:
+```
+ CHANGELOG.md                      | 13 +++++++
+ sepolicy.rule (new)               | 73 +++++++++++++++++++++++++++++++++++++++
+ system/etc/init/init.hidgadget.rc |  2 +-
+ 3 files changed, 87 insertions(+), 1 deletion(-)
+```
+
+
 ## v1.2.1 (2025-04-19 21:21)
 
 - Automated entry for v1.2.1 build

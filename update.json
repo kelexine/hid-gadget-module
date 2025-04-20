@@ -1,6 +1,6 @@
 {
-  "version": "v1.2.1",
-  "versionCode": 10201,
-  "zipUrl": "https://github.com/kelexine/hid-gadget-module/releases/download/v1.2.1/hid-gadget-module-v1.2.1.zip",
+  "version": "v1.3.0",
+  "versionCode": 10300,
+  "zipUrl": "https://github.com/kelexine/hid-gadget-module/releases/download/v1.3.0/hid-gadget-module-v1.3.0.zip",
   "changelog": "https://github.com/kelexine/hid-gadget-module/blob/main/CHANGELOG.md"
 }
