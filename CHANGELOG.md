@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.5.0 (2025-04-20 07:15)
+
+* **Automated Build Details:**
+    * Version: v1.5.0 (Code: 10500)
+    * Build Timestamp: 2025-04-20 07:15
+    * Commit: 63aa781
+    * Commit Subject: Automated build: v1.5.0
+
+* **Technical Changes Summary (from Git diff):**
+```
+ CHANGELOG.md | 35 ++++++++++++++++++-----------------
+ 1 file changed, 18 insertions(+), 17 deletions(-)
+```
+
+
 ## v1.5.0 (2025-04-20 07:13)
 
 * **Automated Build Details:**
