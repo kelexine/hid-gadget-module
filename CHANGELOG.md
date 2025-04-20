@@ -1,12 +1,29 @@
 # Changelog
 
+## v1.4.1 (2025-04-20 06:06)
+
+* **Automated Build Details:**
+    * Version: v1.4.1 (Code: 10401)
+    * Build Timestamp: 2025-04-20 06:06
+    * Commit: 13d2fd6
+    * Commit Subject: Automated build: v1.4.0\n\nChanges:\n\n
+
+* **Technical Changes Summary (from Git diff):**
+```
+ CHANGELOG.md | 104 +++++++++++++----------------------------------------------
+ module.prop  |   4 +--
+ update.json  |   6 ++--
+ 3 files changed, 27 insertions(+), 87 deletions(-)
+```
+
+
 ## v1.4.0 (2025-04-20 05:55)
 
 * **Automated Build Details:**
     * Version: v1.4.0 (Code: 10400)
     * Build Timestamp: 2025-04-20 05:55
     * Commit: 0f6935b
-    * Commit Subject: Automated build: v1.3.0\n\nChanges:\n\n
+    * Commit Subject: Automated build: v1.3.0
 
 * **Release Notes:**
     * *Add detailed release notes for this version here manually.*
