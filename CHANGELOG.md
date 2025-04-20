@@ -4,6 +4,27 @@
 
 - Automated entry for v1.3.0 build
 
+Commit Message: Automated build: v1.3.0\n\nChanges:\n\n
+
+Changes Summary:
+```
+ CHANGELOG.md                           |  15 ++++
+ module.prop                            |   4 +-
+ sepolicy.rule                          |  91 +++++++++-----------
+ sepolicy.te (gone)                     |  73 ----------------
+ system/bin/hid-setup                   | 153 +++++++++++++++++++++------------
+ system/etc/hid/consumer-desc.bin (new) | Bin 0 -> 317 bytes
+ system/etc/hid/keyboard-desc.bin (new) | Bin 0 -> 63 bytes
+ system/etc/hid/mouse-desc.bin (new)    | Bin 0 -> 56 bytes
+ update.json                            |   6 +-
+ 9 files changed, 160 insertions(+), 182 deletions(-)
+```
+
+
+## v1.3.0 (2025-04-20 05:36)
+
+- Automated entry for v1.3.0 build
+
 Commit Message: Automated build: v1.2.1\n\nChanges:\n\n
 
 Changes Summary:
