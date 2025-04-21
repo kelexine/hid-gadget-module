@@ -1,5 +1,85 @@
 # Changelog
 
+## v1.11.0 (2025-04-21 18:22)
+
+* **Automated Build Details:**
+    * Version: v1.11.0 (Code: 11100)
+    * Build Timestamp: 2025-04-21 18:22
+    * Commit: d34b439
+    * Commit Subject: Automated build: v1.7.0
+
+* **Technical Changes Summary (from Git diff):**
+```
+ CHANGELOG.md          |  15 +++++++++++++++
+ system/bin/hid-gadget | Bin 72088 -> 16776 bytes
+ 2 files changed, 15 insertions(+)
+```
+
+
+## v1.10.0 (2025-04-21 18:21)
+
+* **Automated Build Details:**
+    * Version: v1.10.0 (Code: 11000)
+    * Build Timestamp: 2025-04-21 18:21
+    * Commit: d34b439
+    * Commit Subject: Automated build: v1.7.0
+
+* **Technical Changes Summary (from Git diff):**
+```
+ CHANGELOG.md          |  15 +++++++++++++++
+ system/bin/hid-gadget | Bin 72088 -> 16776 bytes
+ 2 files changed, 15 insertions(+)
+```
+
+
+## v1.9.0 (2025-04-21 18:15)
+
+* **Automated Build Details:**
+    * Version: v1.9.0 (Code: 10900)
+    * Build Timestamp: 2025-04-21 18:15
+    * Commit: d34b439
+    * Commit Subject: Automated build: v1.7.0
+
+* **Technical Changes Summary (from Git diff):**
+```
+ CHANGELOG.md          |  15 +++++++++++++++
+ system/bin/hid-gadget | Bin 72088 -> 16776 bytes
+ 2 files changed, 15 insertions(+)
+```
+
+
+## v1.8.0 (2025-04-21 18:08)
+
+* **Automated Build Details:**
+    * Version: v1.8.0 (Code: 10800)
+    * Build Timestamp: 2025-04-21 18:08
+    * Commit: d34b439
+    * Commit Subject: Automated build: v1.7.0
+
+* **Technical Changes Summary (from Git diff):**
+```
+ CHANGELOG.md          |  15 +++++++++++++++
+ system/bin/hid-gadget | Bin 72088 -> 16776 bytes
+ 2 files changed, 15 insertions(+)
+```
+
+
+## v1.7.0 (2025-04-21 17:55)
+
+* **Automated Build Details:**
+    * Version: v1.7.0 (Code: 10700)
+    * Build Timestamp: 2025-04-21 17:55
+    * Commit: d34b439
+    * Commit Subject: Automated build: v1.7.0
+
+* **Technical Changes Summary (from Git diff):**
+```
+ CHANGELOG.md          |  15 +++++++++++++++
+ system/bin/hid-gadget | Bin 72088 -> 16776 bytes
+ 2 files changed, 15 insertions(+)
+```
+
+
 ## v1.7.0 (2025-04-21 10:14)
 
 * **Automated Build Details:**
