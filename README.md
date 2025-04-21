@@ -35,7 +35,7 @@ This Magisk module provides USB HID (Human Interface Device) gadget functionalit
 
 ### Requirements
 
-- Magisk v20.0 or newer
+- Magisk v20.4 or newer
 - A device with USB OTG support and kernel configfs support
 - Root access
 
@@ -131,17 +131,17 @@ hid-consumer BRIGHTNESS-
 
 ### Permission Issues
 
-If you encounter permission errors:
+If you encounter permission errors when using the commands:
 
 ```bash
-# Fix permissions manually
-su -c chmod 666 /dev/hidg0 /dev/hidg1 /dev/hidg2
+# Fix permissions manually (use the correct device nodes)
+su -c chmod 666 /dev/hidg1 /dev/hidg2 /dev/hidg3
 ```
 
 ### Commands Not Working
 
 1. Make sure your device is connected to a host computer
-2. Verify the module is properly installed in Magisk Manager
+2. Verify the module is properly installed and enabled in Magisk Manager
 3. Some functions may not be supported by all host computers
 
 ## Contributing
@@ -156,7 +156,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Acknowledgements
 
