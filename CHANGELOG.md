@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.12.0 (2025-04-21 19:20)
+
+* **Automated Build Details:**
+    * Version: v1.12.0 (Code: 11200)
+    * Build Timestamp: 2025-04-21 19:20
+    * Commit: 8361b78
+    * Commit Subject: Automated build: v1.12.0
+
+* **Technical Changes Summary (from Git diff):**
+```
+ CHANGELOG.md | 31 +++++++++++++++----------------
+ README.md    | 12 ++++++------
+ 2 files changed, 21 insertions(+), 22 deletions(-)
+```
+
+
 ## v1.12.0 (2025-04-21 19:09)
 
 * **Automated Build Details:**
@@ -32,20 +48,4 @@
  blobs/x86_64/hid-gadget | Bin 13720 -> 15656 bytes
  hid-gadget.c            | 325 +++++++++++++++++++++++++++++-------------------
  6 files changed, 210 insertions(+), 148 deletions(-)
-```
-
-
-## v1.12.0 (2025-04-21 18:58)
-
-* **Automated Build Details:**
-    * Version: v1.12.0 (Code: 11200)
-    * Build Timestamp: 2025-04-21 18:58
-    * Commit: 80fa918
-    * Commit Subject: Automated build: v1.12.0
-
-* **Technical Changes Summary (from Git diff):**
-```
- CHANGELOG.md         |  31 +++---
- system/bin/hid-setup | 268 +++++++++++++++++++++++++--------------------------
- 2 files changed, 146 insertions(+), 153 deletions(-)
 ```

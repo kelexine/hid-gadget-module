@@ -125,6 +125,9 @@ set_perm "$MODPATH/system/bin/hid-consumer" 0 2000 0755 || print_error_and_exit 
 set_perm "$MODPATH/system/bin/hid-setup"    0 2000 0755 || print_error_and_exit "Failed setting permissions for hid-setup."
 # Set permissions for the init script
 set_perm "$MODPATH/system/etc/init/init.hidgadget.rc" 0 0 0644 || print_error_and_exit "Failed setting permissions for init.hidgadget.rc."
+set_perm "$MODPATH/service.sh" 0 0 0755 || print_error_and_exit "Failed setting permissions for service.sh."
+
+print_success "Executable and specific permissions set."
 # Set permissions for descriptor files
 if [ -d "$MODPATH/system/etc/hid" ]; then
   set_perm_recursive "$MODPATH/system/etc/hid" 0 0 0755 0644 || print_error_and_exit "Failed setting permissions for /system/etc/hid."
