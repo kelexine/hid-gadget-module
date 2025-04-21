@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.7.0 (2025-04-21 10:22)
+
+* **Automated Build Details:**
+    * Version: v1.7.0 (Code: 10700)
+    * Build Timestamp: 2025-04-21 10:22
+    * Commit: d34b439
+    * Commit Subject: Automated build: v1.7.0
+
+* **Technical Changes Summary (from Git diff):**
+```
+ CHANGELOG.md          |  15 +++++++++++++++
+ system/bin/hid-gadget | Bin 72088 -> 16776 bytes
+ 2 files changed, 15 insertions(+)
+```
+
+
 ## v1.7.0 (2025-04-21 10:14)
 
 * **Automated Build Details:**
