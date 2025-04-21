@@ -1,171 +1,163 @@
 #!/system/bin/sh
-# hid-setup - Configure USB HID gadget
-# This script sets up the USB HID gadget with keyboard, mouse, and consumer control devices
-# It now reads HID report descriptors from files in the module's /system/etc/hid directory.
+# hid-setup - Configure USB HID gadget using standard Android paths
+# This script adds HID functions (keyboard, mouse, consumer) to the
+# standard Android gadget configuration (/config/usb_gadget/g1/configs/b.1).
+# It uses hid.gs1, hid.gs2, hid.gs3 as function names.
+# It reads HID report descriptors from files in the module's /system/etc/hid directory.
 
 set -e
 
-# Function to generate a random serial number
-generate_serial() {
-    # Generate a random 10-character alphanumeric string
-    tr -dc 'A-Z0-9' < /dev/urandom | head -c 10
-}
+# Standard Android gadget paths
+GADGET_DIR="/config/usb_gadget/g1"
+CONFIG_DIR="${GADGET_DIR}/configs/b.1"
 
-# Find the configfs mount point
-# Prefer /config as it's standard on recent Android
-CONFIGFS_HOME="/config"
+# Function names (using hid.gsX convention)
+KEYBOARD_FUNC="hid.gs1"
+MOUSE_FUNC="hid.gs2"
+CONSUMER_FUNC="hid.gs3"
 
-# Check if /config is a configfs mount point
-if ! mount | grep -q "configfs on $CONFIGFS_HOME"; then
-    # If not mounted at /config, check /sys/kernel/config
-    CONFIGFS_HOME="/sys/kernel/config"
-    # Check if /sys/kernel/config is a configfs mount point
-    if ! mount | grep -q "configfs on $CONFIGFS_HOME"; then
-         # If neither is mounted, something is wrong with the system
-         echo "Error: configfs is not mounted at /config or /sys/kernel/config."
-         # Check logcat for kernel/init errors related to configfs
-         exit 1
-    fi
+# Corresponding device nodes
+KEYBOARD_DEV="/dev/hidg1"
+MOUSE_DEV="/dev/hidg2"
+CONSUMER_DEV="/dev/hidg3"
+
+# Corresponding device node major/minor numbers (assuming standard HID gadget major 243)
+# Minor numbers usually match the function index (0, 1, 2, ...)
+# Since we start functions at gs1, the minor numbers will be 1, 2, 3
+KEYBOARD_MINOR=1
+MOUSE_MINOR=2
+CONSUMER_MINOR=3
+HIDG_MAJOR=243 # Standard major number for hidg devices
+
+# --- Pre-checks ---
+echo "Checking for standard gadget paths..."
+if [ ! -d "$GADGET_DIR" ]; then
+    echo "Error: Standard gadget directory '$GADGET_DIR' not found."
+    echo "Ensure your kernel is configured for USB Gadget support (CONFIG_USB_GADGET)."
+    exit 1
+fi
+if [ ! -d "$CONFIG_DIR" ]; then
+    echo "Error: Standard gadget configuration directory '$CONFIG_DIR' not found."
+    echo "Ensure your system's USB gadget configuration is standard."
+    exit 1
+fi
+echo "Standard paths found."
+
+# --- Cleanup existing functions/links (if they exist from a previous run) ---
+echo "Cleaning up previous HID function links and directories (if any)..."
+# Disable gadget first to allow removal
+CURRENT_UDC=$(cat "$GADGET_DIR/UDC" 2>/dev/null)
+if [ -n "$CURRENT_UDC" ]; then
+    echo "" > "$GADGET_DIR/UDC" || echo "Warning: Could not clear UDC. Cleanup might fail."
+    sleep 1 # Give time for UDC to release
 fi
 
-GADGET_DIR="$CONFIGFS_HOME/usb_gadget/hid"
+# Remove links from the configuration directory
+rm -f "${CONFIG_DIR}/${KEYBOARD_FUNC}" 2>/dev/null || true
+rm -f "${CONFIG_DIR}/${MOUSE_FUNC}" 2>/dev/null || true
+rm -f "${CONFIG_DIR}/${CONSUMER_FUNC}" 2>/dev/null || true
+echo "Removed function links from ${CONFIG_DIR}."
 
-# Remove any existing gadget with the same name
-if [ -d "$GADGET_DIR" ]; then
-    echo "Cleaning up existing gadget configuration in $GADGET_DIR"
-    # Find the UDC and disable it
-    if [ -f "$GADGET_DIR/UDC" ]; then
-        echo "" > "$GADGET_DIR/UDC" || true # Use || true to prevent set -e from failing if UDC write fails
-        echo "Disabled UDC."
-    fi
-
-    # Remove linked functions from the configuration
-    echo "Removing linked functions..."
-    rm -f "$GADGET_DIR/configs/c.1/hid.usb0" 2>/dev/null || true
-    rm -f "$GADGET_DIR/configs/c.1/hid.usb1" 2>/dev/null || true
-    rm -f "$GADGET_DIR/configs/c.1/hid.usb2" 2>/dev/null || true
-    echo "Linked functions removed."
-
-    # Remove functions directories
-    echo "Removing function directories..."
-    rmdir "$GADGET_DIR/functions/hid.usb0" 2>/dev/null || true
-    rmdir "$GADGET_DIR/functions/hid.usb1" 2>/dev/null || true
-    rmdir "$GADGET_DIR/functions/hid.usb2" 2>/dev/null || true
-    echo "Function directories removed."
-
-    # Remove configuration strings directory
-    rmdir "$GADGET_DIR/configs/c.1/strings/0x409" 2>/dev/null || true
-    echo "Config strings directory removed."
-
-    # Remove configuration directory
-    rmdir "$GADGET_DIR/configs/c.1" 2>/dev/null || true
-    echo "Config directory removed."
-
-    # Remove gadget strings directory
-    rmdir "$GADGET_DIR/strings/0x409" 2>/dev/null || true
-     echo "Gadget strings directory removed."
-
-    # Remove gadget directory
-    rmdir "$GADGET_DIR" 2>/dev/null || true
-    echo "Gadget directory removed."
-fi
-
-# Create gadget directory
-echo "Creating gadget directory: $GADGET_DIR"
-mkdir -p "$GADGET_DIR" || { echo "Error: Failed to create $GADGET_DIR. Check configfs mount and SELinux."; exit 1; }
+# Remove function directories
+rmdir "${GADGET_DIR}/functions/${KEYBOARD_FUNC}" 2>/dev/null || true
+rmdir "${GADGET_DIR}/functions/${MOUSE_FUNC}" 2>/dev/null || true
+rmdir "${GADGET_DIR}/functions/${CONSUMER_FUNC}" 2>/dev/null || true
+echo "Removed function directories from ${GADGET_DIR}/functions."
 
 
-# Set USB device properties
-echo "Setting device properties..."
-echo 0x046d > "$GADGET_DIR/idVendor"
-echo 0xc52b > "$GADGET_DIR/idProduct"
-
-# Set device strings
-echo "Setting device strings..."
-mkdir -p "$GADGET_DIR/strings/0x409" || { echo "Error: Failed to create $GADGET_DIR/strings/0x409. Check SELinux."; exit 1; }
-echo "L$(generate_serial)" > "$GADGET_DIR/strings/0x409/serialnumber"
-echo "Logitech" > "$GADGET_DIR/strings/0x409/manufacturer"
-echo "Wireless Combo MK520" > "$GADGET_DIR/strings/0x409/product"
-
-# Create configuration
-echo "Creating configuration c.1..."
-mkdir -p "$GADGET_DIR/configs/c.1" || { echo "Error: Failed to create $GADGET_DIR/configs/c.1. Check SELinux."; exit 1; }
-mkdir -p "$GADGET_DIR/configs/c.1/strings/0x409" || { echo "Error: Failed to create $GADGET_DIR/configs/c.1/strings/0x409. Check SELinux."; exit 1; }
-echo "HID Devices" > "$GADGET_DIR/configs/c.1/strings/0x409/configuration"
-echo 500 > "$GADGET_DIR/configs/c.1/MaxPower"
+# --- Create HID functions ---
 
 # Create keyboard function
-echo "Creating keyboard function hid.usb0..."
-mkdir -p "$GADGET_DIR/functions/hid.usb0" || { echo "Error: Failed to create $GADGET_DIR/functions/hid.usb0. Check SELinux."; exit 1; }
-echo 1 > "$GADGET_DIR/functions/hid.usb0/protocol"  # Keyboard (Boot Protocol)
-echo 1 > "$GADGET_DIR/functions/hid.usb0/subclass"  # Boot Interface Subclass
-echo 8 > "$GADGET_DIR/functions/hid.usb0/report_length"
-# --- MODIFIED: Read report descriptor from file ---
-cat "${MODPATH}/system/etc/hid/keyboard-desc.bin" > "$GADGET_DIR/functions/hid.usb0/report_desc" || { echo "Error: Failed to write keyboard report_desc. Check file existence and SELinux."; exit 1; }
-
+echo "Creating keyboard function ${KEYBOARD_FUNC}..."
+mkdir -p "${GADGET_DIR}/functions/${KEYBOARD_FUNC}" || { echo "Error: Failed to create ${GADGET_DIR}/functions/${KEYBOARD_FUNC}. Check SELinux."; exit 1; }
+echo 1 > "${GADGET_DIR}/functions/${KEYBOARD_FUNC}/protocol"  # Keyboard (Boot Protocol)
+echo 1 > "${GADGET_DIR}/functions/${KEYBOARD_FUNC}/subclass"  # Boot Interface Subclass
+echo 8 > "${GADGET_DIR}/functions/${KEYBOARD_FUNC}/report_length"
+# Read report descriptor from file
+cat "${MODPATH}/system/etc/hid/keyboard-desc.bin" > "${GADGET_DIR}/functions/${KEYBOARD_FUNC}/report_desc" || { echo "Error: Failed to write keyboard report_desc. Check file existence and SELinux."; exit 1; }
 
 # Create mouse function
-echo "Creating mouse function hid.usb1..."
-mkdir -p "$GADGET_DIR/functions/hid.usb1" || { echo "Error: Failed to create $GADGET_DIR/functions/hid.usb1. Check SELinux."; exit 1; }
-echo 2 > "$GADGET_DIR/functions/hid.usb1/protocol"  # Mouse (Boot Protocol)
-echo 1 > "$GADGET_DIR/functions/hid.usb1/subclass"  # Boot Interface Subclass
-echo 4 > "$GADGET_DIR/functions/hid.usb1/report_length"
-# --- MODIFIED: Read report descriptor from file ---
-cat "${MODPATH}/system/etc/hid/mouse-desc.bin" > "$GADGET_DIR/functions/hid.usb1/report_desc" || { echo "Error: Failed to write mouse report_desc. Check file existence and SELinux."; exit 1; }
-
+echo "Creating mouse function ${MOUSE_FUNC}..."
+mkdir -p "${GADGET_DIR}/functions/${MOUSE_FUNC}" || { echo "Error: Failed to create ${GADGET_DIR}/functions/${MOUSE_FUNC}. Check SELinux."; exit 1; }
+echo 2 > "${GADGET_DIR}/functions/${MOUSE_FUNC}/protocol"  # Mouse (Boot Protocol)
+echo 1 > "${GADGET_DIR}/functions/${MOUSE_FUNC}/subclass"  # Boot Interface Subclass
+echo 4 > "${GADGET_DIR}/functions/${MOUSE_FUNC}/report_length"
+# Read report descriptor from file
+cat "${MODPATH}/system/etc/hid/mouse-desc.bin" > "${GADGET_DIR}/functions/${MOUSE_FUNC}/report_desc" || { echo "Error: Failed to write mouse report_desc. Check file existence and SELinux."; exit 1; }
 
 # Create consumer control function
-echo "Creating consumer control function hid.usb2..."
-mkdir -p "$GADGET_DIR/functions/hid.usb2" || { echo "Error: Failed to create $GADGET_DIR/functions/hid.usb2. Check SELinux."; exit 1; }
-echo 0 > "$GADGET_DIR/functions/hid.usb2/protocol"  # None (Report Protocol)
-echo 0 > "$GADGET_DIR/functions/hid.usb2/subclass"  # None
-echo 2 > "$GADGET_DIR/functions/hid.usb2/report_length"
-# --- MODIFIED: Read report descriptor from file ---
-cat "${MODPATH}/system/etc/hid/consumer-desc.bin" > "$GADGET_DIR/functions/hid.usb2/report_desc" || { echo "Error: Failed to write consumer report_desc. Check file existence and SELinux."; exit 1; }
+echo "Creating consumer control function ${CONSUMER_FUNC}..."
+mkdir -p "${GADGET_DIR}/functions/${CONSUMER_FUNC}" || { echo "Error: Failed to create ${GADGET_DIR}/functions/${CONSUMER_FUNC}. Check SELinux."; exit 1; }
+echo 0 > "${GADGET_DIR}/functions/${CONSUMER_FUNC}/protocol"  # None (Report Protocol)
+echo 0 > "${GADGET_DIR}/functions/${CONSUMER_FUNC}/subclass"  # None
+echo 2 > "${GADGET_DIR}/functions/${CONSUMER_FUNC}/report_length"
+# Read report descriptor from file
+cat "${MODPATH}/system/etc/hid/consumer-desc.bin" > "${GADGET_DIR}/functions/${CONSUMER_FUNC}/report_desc" || { echo "Error: Failed to write consumer report_desc. Check file existence and SELinux."; exit 1; }
 
 
-# Link functions to configuration
-echo "Linking functions to configuration c.1..."
-ln -s "$GADGET_DIR/functions/hid.usb0" "$GADGET_DIR/configs/c.1/hid.usb0" || { echo "Error: Failed to link hid.usb0. Check SELinux."; exit 1; }
-ln -s "$GADGET_DIR/functions/hid.usb1" "$GADGET_DIR/configs/c.1/hid.usb1" || { echo "Error: Failed to link hid.usb1. Check SELinux."; exit 1; }
-ln -s "$GADGET_DIR/functions/hid.usb2" "$GADGET_DIR/configs/c.1/hid.usb2" || { echo "Error: Failed to link hid.usb2. Check SELinux."; exit 1; }
+# --- Link functions to the standard configuration ---
+echo "Linking functions to configuration ${CONFIG_DIR}..."
+ln -s "${GADGET_DIR}/functions/${KEYBOARD_FUNC}" "${CONFIG_DIR}/${KEYBOARD_FUNC}" || { echo "Error: Failed to link ${KEYBOARD_FUNC}. Check SELinux."; exit 1; }
+ln -s "${GADGET_DIR}/functions/${MOUSE_FUNC}" "${CONFIG_DIR}/${MOUSE_FUNC}" || { echo "Error: Failed to link ${MOUSE_FUNC}. Check SELinux."; exit 1; }
+ln -s "${GADGET_DIR}/functions/${CONSUMER_FUNC}" "${CONFIG_DIR}/${CONSUMER_FUNC}" || { echo "Error: Failed to link ${CONSUMER_FUNC}. Check SELinux."; exit 1; }
 echo "Functions linked."
 
 
-# Find the first available UDC
+# --- Re-enable the gadget using the previously active UDC or find one ---
 echo "Finding and enabling UDC..."
-UDC_FOUND=false
-for UDC in /sys/class/udc/*; do
-    if [ -e "$UDC" ]; then
-        UDC_NAME=$(basename "$UDC")
-        echo "$UDC_NAME" > "$GADGET_DIR/UDC" || { echo "Warning: Failed to write UDC name '$UDC_NAME' to $GADGET_DIR/UDC. Trying next UDC or continuing."; }
-        # Verify if the UDC was actually set
-        if [ "$(cat "$GADGET_DIR/UDC")" = "$UDC_NAME" ]; then
-            echo "Enabled gadget on UDC: $UDC_NAME"
-            UDC_FOUND=true
-            break # Stop after the first successful UDC
-        fi
+UDC_TO_ENABLE=""
+if [ -n "$CURRENT_UDC" ]; then
+    # Try the previously active UDC first
+    if [ -e "/sys/class/udc/${CURRENT_UDC}" ]; then
+        echo "Attempting to re-enable on previous UDC: ${CURRENT_UDC}"
+        UDC_TO_ENABLE="$CURRENT_UDC"
+    else
+        echo "Previous UDC '${CURRENT_UDC}' not found. Searching for available UDC..."
     fi
-done
-
-if [ "$UDC_FOUND" = false ]; then
-    echo "Error: No available UDC found or could not enable gadget on any UDC."
-    echo "Check kernel configuration (CONFIG_USB_GADGET), USB cable connection, and SELinux policy for /sys/class/udc access."
-    exit 1 # Exit if no UDC could be enabled
 fi
 
-# Create device nodes
+# If no previous UDC or it wasn't found, search for one
+if [ -z "$UDC_TO_ENABLE" ]; then
+    for UDC in /sys/class/udc/*; do
+        if [ -e "$UDC" ]; then
+            UDC_NAME=$(basename "$UDC")
+            echo "Found available UDC: $UDC_NAME"
+            UDC_TO_ENABLE="$UDC_NAME"
+            break # Use the first one found
+        fi
+    done
+fi
+
+if [ -z "$UDC_TO_ENABLE" ]; then
+    echo "Error: No available UDC found in /sys/class/udc/."
+    echo "Check kernel configuration (CONFIG_USB_GADGET), USB cable connection, and SELinux policy for /sys/class/udc access."
+    exit 1 # Exit if no UDC could be found
+fi
+
+# Enable the gadget
+echo "Enabling gadget on UDC: $UDC_TO_ENABLE"
+echo "$UDC_TO_ENABLE" > "$GADGET_DIR/UDC" || { echo "Error: Failed to write UDC name '$UDC_TO_ENABLE' to $GADGET_DIR/UDC. Check SELinux."; exit 1; }
+
+# Verify if the UDC was actually set
+if [ "$(cat "$GADGET_DIR/UDC")" != "$UDC_TO_ENABLE" ]; then
+    echo "Error: Failed to confirm gadget enablement on UDC '$UDC_TO_ENABLE'."
+    exit 1
+fi
+echo "Gadget enabled."
+
+
+# --- Create device nodes ---
 # These should ideally be created by udev/devd based on kernel events,
 # but manual creation is sometimes necessary on Android.
-echo "Creating device nodes /dev/hidgX..."
+echo "Creating device nodes ${KEYBOARD_DEV}, ${MOUSE_DEV}, ${CONSUMER_DEV}..."
 mkdir -p /dev || { echo "Warning: Could not create /dev directory? Permissions issue?"; } # Should usually exist
-mknod /dev/hidg0 c 243 0 2>/dev/null || { echo "Warning: Could not create /dev/hidg0. May already exist or permissions issue. Check SELinux."; }
-mknod /dev/hidg1 c 243 1 2>/dev/null || { echo "Warning: Could not create /dev/hidg1. May already exist or permissions issue. Check SELinux."; }
-mknod /dev/hidg2 c 243 2 2>/dev/null || { echo "Warning: Could not create /dev/hidg2. May already exist or permissions issue. Check SELinux."; }
+mknod ${KEYBOARD_DEV} c ${HIDG_MAJOR} ${KEYBOARD_MINOR} 2>/dev/null || { echo "Warning: Could not create ${KEYBOARD_DEV}. May already exist or permissions issue. Check SELinux."; }
+mknod ${MOUSE_DEV} c ${HIDG_MAJOR} ${MOUSE_MINOR} 2>/dev/null || { echo "Warning: Could not create ${MOUSE_DEV}. May already exist or permissions issue. Check SELinux."; }
+mknod ${CONSUMER_DEV} c ${HIDG_MAJOR} ${CONSUMER_MINOR} 2>/dev/null || { echo "Warning: Could not create ${CONSUMER_DEV}. May already exist or permissions issue. Check SELinux."; }
 # Set permissions for the device nodes
-chmod 666 /dev/hidg0 /dev/hidg1 /dev/hidg2 2>/dev/null || { echo "Warning: Could not chmod /dev/hidgX. Check SELinux policy for device nodes."; }
+chmod 666 ${KEYBOARD_DEV} ${MOUSE_DEV} ${CONSUMER_DEV} 2>/dev/null || { echo "Warning: Could not chmod /dev/hidgX. Check SELinux policy for device nodes."; }
 echo "Device nodes created and permissions set (attempted)."
 
 
-echo "HID gadget setup complete"
+echo "HID gadget setup complete using standard paths and hid.gsX functions."
 exit 0
