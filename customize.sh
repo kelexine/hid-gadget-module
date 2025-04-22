@@ -1,118 +1,145 @@
 #!/system/bin/sh
 # Magisk Module Installation Script for HID Gadget Module
-# Adapted for improved robustness and logging
+# Enhanced for better visual feedback and robustness
 
-set -e # Exit immediately if a command exits with a non-zero status. This is a primary robustness measure.
+# Strict mode: Exit on any error
+set -e
 
-# Inherit environment from update-binary ($MODPATH, $ZIPFILE, $OUTFD, and sourced util_functions.sh)
-# The zip has already been extracted to $MODPATH by install_module before this script is executed.
+# --- Initialization ---
+# Inherit environment from update-binary ($MODPATH, $ZIPFILE, $OUTFD, $ARCH, $API, and sourced util_functions.sh)
 
-ui_print "**************************************************"
-ui_print " Running custom installation script..."
-ui_print "**************************************************"
-
-# Ensure MODPATH is set (should be set by update-binary, but this is a critical defensive check)
-if [ -z "$MODPATH" ]; then
-  ui_print "**************************************************"
-  ui_print " Error: MODPATH variable is NOT set!"
-  ui_print " Cannot determine installation path. Aborting."
-  ui_print "**************************************************"
-  exit 1 # Exit with error code
-fi
-ui_print "- Installation path (MODPATH) is: $MODPATH"
-ui_print "" # Add an empty line for spacing
-
-
-# --- Display Module Info Banner ---
-
-ui_print "- Reading module info from module.prop at $MODPATH/module.prop..."
-# Read module info using grep and cut. Redirect stderr to /dev/null for silent errors if file/fields are missing.
-MODULE_ID=$(grep "^id=" "$MODPATH/module.prop" 2>/dev/null | cut -d= -f2)
-MODULE_NAME=$(grep "^name=" "$MODPATH/module.prop" 2>/dev/null | cut -d= -f2)
-MODULE_VERSION=$(grep "^version=" "$MODPATH/module.prop" 2>/dev/null | cut -d= -f2)
-MODULE_VERSION_CODE=$(grep "^versionCode=" "$MODPATH/module.prop" 2>/dev/null | cut -d= -f2)
-MODULE_AUTHOR=$(grep "^author=" "$MODPATH/module.prop" 2>/dev/null | cut -d= -f2)
-
-# Check if critical info was successfully read. Print warning if not.
-if [ -z "$MODULE_ID" ] || [ -z "$MODULE_NAME" ]; then
-  ui_print "**************************************************"
-  ui_print " Warning: Could not read critical info from module.prop!"
-  ui_print " Module might not be listed correctly in Magisk Manager."
-  ui_print " Ensure $MODPATH/module.prop exists and is valid."
-  ui_print "**************************************************"
-  # We don't exit here, allowing installation to proceed if possible, but warning the user.
-fi
-
-# Display the module information read
-ui_print "**************************************************"
-ui_print "      Module Details"
-ui_print "**************************************************"
-# Use :-N/A for variables in case reading module.prop failed
-ui_print " ID:            ${MODULE_ID:-N/A}"
-ui_print " Name:          ${MODULE_NAME:-N/A}"
-ui_print " Version:       ${MODULE_VERSION:-N/A} (${MODULE_VERSION_CODE:-N/A})"
-ui_print " Author:        ${MODULE_AUTHOR:-N/A}"
-ui_print "**************************************************"
-ui_print "" # Add an empty line for spacing
-
-ui_print "- Starting custom installation tasks..."
-
-# --- Installation Steps ---
-
-# Remove the META-INF directory from the installed module path ($MODPATH)
-# This is standard practice as META-INF is only needed inside the zip for installation metadata.
-ui_print "  Checking for and removing META-INF directory..."
-if [ -d "$MODPATH/META-INF" ]; then
-  # Use rm -rf for robustness in case permissions are weird or contents cause issues
-  rm -rf "$MODPATH/META-INF" || ui_print "  Warning: Failed to remove META-INF directory! (Installation may still proceed)"
-  ui_print "  META-INF directory removed."
-else
-  ui_print "  META-INF directory not found in $MODPATH, skipping removal."
-fi
-
-# Set permissions for the installed files and directories
-ui_print "  Setting file permissions recursively for $MODPATH..."
-
-# Set default permissions for the entire module directory recursively.
-# This includes the module directory itself ($MODPATH).
-# owner=root (0), group=root (0), directories=0755 (drwxr-xr-x), files=0644 (-rw-r--r--)
-# set_perm_recursive is provided by Magisk's util_functions.sh. It handles standard SELinux contexts.
-set_perm_recursive "$MODPATH" 0 0 0755 0644 || {
-    ui_print "**************************************************"
-    ui_print " Error: Failed to set recursive permissions on $MODPATH!"
-    ui_print " Installation aborted. Check logs."
-    ui_print "**************************************************"
-    exit 1 # Exit if recursive permissions fail
+# Function for printing separators
+print_separator() {
+  ui_print "##################################################"
 }
-ui_print "  Recursive permissions set (0755 dirs / 0644 files, owner:root, group:root)."
 
+# Function for printing step headers
+print_step() {
+  ui_print " " # Add spacing before step
+  ui_print "--- $1 ---"
+}
 
-ui_print "  Setting specific executable permissions for scripts in $MODPATH/system/bin..."
-# Set specific permissions for executable scripts/binaries in system/bin.
-# owner=root (0), group=shell (2000), permissions=0755 (-rwxr-xr-x)
-# The group 'shell' (2000) is common for user-executable system binaries.
-# set_perm is provided by Magisk's util_functions.sh.
-set_perm "$MODPATH/system/bin/hid-gadget" 0 2000 0755 || { ui_print "Error setting perms for hid-gadget! Aborting."; exit 1; }
-set_perm "$MODPATH/system/bin/hid-keyboard" 0 2000 0755 || { ui_print "Error setting perms for hid-keyboard! Aborting."; exit 1; }
-set_perm "$MODPATH/system/bin/hid-mouse" 0 2000 0755 || { ui_print "Error setting perms for hid-mouse! Aborting."; exit 1; }
-set_perm "$MODPATH/system/bin/hid-consumer" 0 2000 0755 || { ui_print "Error setting perms for hid-consumer! Aborting."; exit 1; }
-set_perm "$MODPATH/system/bin/hid-setup" 0 2000 0755 || { ui_print "Error setting perms for hid-setup! Aborting."; exit 1; }
-ui_print "  Specific executable permissions set (0755 owner:root, group:shell)."
+# Function for printing success messages
+print_success() {
+  ui_print "[+] $1"
+}
 
-# You can add other custom installation steps here if needed, e.g.,
-# - Adjusting config files based on device properties
-# - Displaying configuration options (more advanced UI)
-# - Performing device-specific patches
+# Function for printing error messages and exiting
+print_error_and_exit() {
+  ui_print "[!] ERROR: $1"
+  ui_print "[!] Installation failed."
+  print_separator
+  exit 1
+}
 
+# --- Start Installation ---
+print_separator
+ui_print " Running HID Gadget Module Installation Script"
+ui_print " Device Arch: $ARCH  |  Android API: $API"
+print_separator
+ui_print " "
 
-ui_print "" # Add an empty line for spacing
-ui_print "- Custom installation tasks finished."
-ui_print "**************************************************"
+# --- Check Environment ---
+print_step "Checking Environment"
+if [ -z "$MODPATH" ]; then
+  print_error_and_exit "MODPATH variable is not set. Cannot determine installation path."
+fi
+ui_print "  - Installation path (MODPATH): $MODPATH"
+# Check if util_functions.sh was sourced (check for a known function)
+if ! command -v set_perm &> /dev/null; then
+    print_error_and_exit "Magisk utility functions (util_functions.sh) not loaded."
+fi
+print_success "Environment checks passed."
+
+# --- Display Module Info ---
+print_step "Reading Module Information"
+# Read module info safely, providing defaults
+MODULE_ID=$(grep_prop id "$MODPATH/module.prop")
+MODULE_NAME=$(grep_prop name "$MODPATH/module.prop")
+MODULE_VERSION=$(grep_prop version "$MODPATH/module.prop")
+MODULE_VERSION_CODE=$(grep_prop versionCode "$MODPATH/module.prop")
+MODULE_AUTHOR=$(grep_prop author "$MODPATH/module.prop")
+
+if [ -z "$MODULE_ID" ] || [ -z "$MODULE_NAME" ]; then
+  ui_print "  [!] Warning: Could not read critical info from module.prop!"
+fi
+
+ui_print " "
+ui_print "    Module ID:        ${MODULE_ID:-N/A}"
+ui_print "    Module Name:      ${MODULE_NAME:-N/A}"
+ui_print "    Version:          ${MODULE_VERSION:-N/A} (Code: ${MODULE_VERSION_CODE:-N/A})"
+ui_print "    Author:           ${MODULE_AUTHOR:-N/A}"
+ui_print " "
+print_success "Module information displayed."
+
+# --- Architecture-Specific Binary Handling ---
+print_step "Handling Architecture-Specific Binary"
+ui_print "  - Detected device architecture: $ARCH"
+
+ARCH_BINARY_SRC="$MODPATH/blobs/$ARCH/hid-gadget"
+BINARY_DEST_DIR="$MODPATH/system/bin"
+BINARY_DEST_FILE="$BINARY_DEST_DIR/hid-gadget"
+
+ui_print "  - Checking for pre-compiled binary: $ARCH_BINARY_SRC"
+if [ ! -f "$ARCH_BINARY_SRC" ]; then
+  print_error_and_exit "Binary for architecture '$ARCH' not found at $ARCH_BINARY_SRC. Module may not support your device."
+fi
+print_success "Found binary for $ARCH architecture."
+
+ui_print "  - Preparing destination directory: $BINARY_DEST_DIR"
+mkdir -p "$BINARY_DEST_DIR" || print_error_and_exit "Failed to create destination directory $BINARY_DEST_DIR."
+print_success "Destination directory ensured."
+
+ui_print "  - Copying binary to $BINARY_DEST_FILE"
+cp "$ARCH_BINARY_SRC" "$BINARY_DEST_FILE" || print_error_and_exit "Failed to copy binary from $ARCH_BINARY_SRC to $BINARY_DEST_FILE."
+print_success "Binary copied successfully."
+
+# Clean up the blobs directory
+print_step "Cleaning Up Temporary Files"
+ui_print "  - Removing temporary blobs directory: $MODPATH/blobs"
+rm -rf "$MODPATH/blobs" || ui_print "  [!] Warning: Failed to remove $MODPATH/blobs directory."
+print_success "Temporary files cleaned up."
+
+# --- Set Permissions ---
+print_step "Setting File Permissions"
+
+# Remove META-INF (often done by Magisk, but good to ensure)
+ui_print "  - Removing META-INF directory..."
+if [ -d "$MODPATH/META-INF" ]; then
+  rm -rf "$MODPATH/META-INF" || ui_print "  [!] Warning: Failed to remove META-INF directory!"
+  print_success "META-INF directory removed."
+else
+  ui_print "  - META-INF directory not found, skipping removal."
+fi
+
+ui_print "  - Setting default recursive permissions (root:root, 0755 dirs, 0644 files)..."
+set_perm_recursive "$MODPATH" 0 0 0755 0644 || print_error_and_exit "Failed to set recursive permissions on $MODPATH."
+print_success "Default permissions set."
+
+ui_print "  - Setting specific executable permissions (root:shell, 0755)..."
+# Set executable permissions for the main binary and wrappers
+set_perm "$MODPATH/system/bin/hid-gadget"   0 2000 0755 || print_error_and_exit "Failed setting permissions for hid-gadget."
+set_perm "$MODPATH/system/bin/hid-keyboard" 0 2000 0755 || print_error_and_exit "Failed setting permissions for hid-keyboard."
+set_perm "$MODPATH/system/bin/hid-mouse"    0 2000 0755 || print_error_and_exit "Failed setting permissions for hid-mouse."
+set_perm "$MODPATH/system/bin/hid-consumer" 0 2000 0755 || print_error_and_exit "Failed setting permissions for hid-consumer."
+set_perm "$MODPATH/system/bin/hid-setup"    0 2000 0755 || print_error_and_exit "Failed setting permissions for hid-setup."
+# Set permissions for the init script
+set_perm "$MODPATH/system/etc/init/init.hidgadget.rc" 0 0 0644 || print_error_and_exit "Failed setting permissions for init.hidgadget.rc."
+set_perm "$MODPATH/service.sh" 0 0 0755 || print_error_and_exit "Failed setting permissions for service.sh."
+
+print_success "Executable and specific permissions set."
+# Set permissions for descriptor files
+if [ -d "$MODPATH/system/etc/hid" ]; then
+  set_perm_recursive "$MODPATH/system/etc/hid" 0 0 0755 0644 || print_error_and_exit "Failed setting permissions for /system/etc/hid."
+fi
+print_success "Executable and specific permissions set."
+
+# --- Finalization ---
+ui_print " "
+print_separator
 ui_print " Module Installation Successful!"
 ui_print " Please REBOOT your device for changes to take effect."
-ui_print "**************************************************"
+print_separator
+ui_print " "
 
-
-# Exit with 0 to indicate success to install_module.
-# install_module will finalize the installation if this script exits with 0.
 exit 0
