@@ -41,6 +41,13 @@ This Magisk module provides USB HID (Human Interface Device) gadget functionalit
 
 ## Usage
 
+The tool automatically discovers and uses available HID gadget devices (`/dev/hidgX`). It dynamically identifies and assigns the first three HID gadget devices it finds:
+- First device: Keyboard
+- Second device: Mouse
+- Third device: Consumer controls
+
+This means you don't need to worry about specific device nodes - the tool handles this automatically.
+
 ### Keyboard Commands
 
 The `hid-keyboard` tool lets you send keyboard events:
@@ -129,13 +136,26 @@ hid-consumer BRIGHTNESS-
 4. Reboot your device
 5. Check logs with `logcat | grep hidg`
 
+### HID Device Detection Issues
+
+If the automatic device detection isn't working:
+
+```bash
+# Run the command with no arguments to see which devices were detected
+hid-keyboard
+```
+
+The command will show which device paths were dynamically assigned to keyboard, mouse, and consumer functions.
+
 ### Permission Issues
 
 If you encounter permission errors when using the commands:
 
 ```bash
-# Fix permissions manually (use the correct device nodes)
-su -c chmod 666 /dev/hidg1 /dev/hidg2 /dev/hidg3
+# Find which hidg devices are being used
+hid-keyboard
+# Fix permissions manually based on the output
+su -c chmod 666 /dev/hidg*
 ```
 
 ### Commands Not Working
