@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.17.0 (2025-04-22 09:12)
+
+* **Automated Build Details:**
+    * Version: v1.17.0 (Code: 11700)
+    * Build Timestamp: 2025-04-22 09:12
+    * Commit: ca1d180
+    * Commit Subject: Automated build: v1.17.0
+
+* **Technical Changes Summary (from Git diff):**
+```
+ CHANGELOG.md | 30 +++++++++++++++---------------
+ 1 file changed, 15 insertions(+), 15 deletions(-)
+```
+
+
 ## v1.17.0 (2025-04-22 09:06)
 
 * **Automated Build Details:**
@@ -35,19 +50,4 @@
  module.prop             |   4 +-
  update.json             |   6 +-
  9 files changed, 391 insertions(+), 190 deletions(-)
-```
-
-
-## v1.17.0 (2025-04-22 08:59)
-
-* **Automated Build Details:**
-    * Version: v1.17.0 (Code: 11700)
-    * Build Timestamp: 2025-04-22 08:59
-    * Commit: 1e7ac98
-    * Commit Subject: Automated build: v1.16.1
-
-* **Technical Changes Summary (from Git diff):**
-```
- CHANGELOG.md | 15 +++++++++++++++
- 1 file changed, 15 insertions(+)
 ```
