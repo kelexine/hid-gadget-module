@@ -1,12 +1,8 @@
 #!/system/bin/sh
 # Magisk Module Installation Script for HID Gadget Module
-# Enhanced for better visual feedback and robustness
 
 # Strict mode: Exit on any error
 set -e
-
-# --- Initialization ---
-# Inherit environment from update-binary ($MODPATH, $ZIPFILE, $OUTFD, $ARCH, $API, and sourced util_functions.sh)
 
 # Function for printing separators
 print_separator() {
@@ -133,6 +129,13 @@ if [ -d "$MODPATH/system/etc/hid" ]; then
   set_perm_recursive "$MODPATH/system/etc/hid" 0 0 0755 0644 || print_error_and_exit "Failed setting permissions for /system/etc/hid."
 fi
 print_success "Executable and specific permissions set."
+ui_print " "
+if [ -d "$MODID" ]; then
+    ui_print "Updating to ${MODULE_NAME:-N/A} ${MODULE_VERSION:-N/A} (Code: ${MODULE_VERSION_CODE:-N/A})"
+    sleep 5
+    touch "$MODID/update" || print_error_and_exit "Looks like a fialed update. Aborting....." || abort
+    ui_print "Updated Successfully"
+fi
 
 # --- Finalization ---
 ui_print " "

@@ -183,3 +183,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - The Magisk development team
 - Linux kernel USB gadget documentation
 - All contributors and testers
+- Amd also to [ME](https://github.com/kelexine)
