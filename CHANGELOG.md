@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.16.1 (2025-04-22 08:22)
+
+* **Automated Build Details:**
+    * Version: v1.16.1 (Code: 11601)
+    * Build Timestamp: 2025-04-22 08:22
+    * Commit: ef56d7f
+    * Commit Subject: fix : fix binary
+
+* **Technical Changes Summary (from Git diff):**
+```
+ system/bin/hid-gadget (gone) | Bin 16776 -> 0 bytes
+ 1 file changed, 0 insertions(+), 0 deletions(-)
+```
+
+
 ## v1.16.1 (2025-04-21 19:37)
 
 * **Automated Build Details:**
