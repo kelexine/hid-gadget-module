@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.17.0 (2025-04-22 14:13)
+
+* **Automated Build Details:**
+    * Version: v1.17.0 (Code: 11700)
+    * Build Timestamp: 2025-04-22 14:13
+    * Commit: 2a24c1d
+    * Commit Subject: Automated build: v1.17.0
+
+* **Technical Changes Summary (from Git diff):**
+```
+ CHANGELOG.md | 20 ++++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+```
+
+
 ## v1.17.0 (2025-04-22 14:09)
 
 * **Automated Build Details:**
