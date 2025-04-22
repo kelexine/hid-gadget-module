@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.17.0 (2025-04-22 14:09)
+
+* **Automated Build Details:**
+    * Version: v1.17.0 (Code: 11700)
+    * Build Timestamp: 2025-04-22 14:09
+    * Commit: 2c437f8
+    * Commit Subject: Automated build: v1.17.0
+
+* **Technical Changes Summary (from Git diff):**
+```
+ CHANGELOG.md           |  27 +++++
+ README.md              |   1 +
+ blobs/arm64/hid-gadget | Bin 19432 -> 22928 bytes
+ customize.sh           |  11 +-
+ sepolicy.rule          |  48 +--------
+ system/bin/hid-setup   | 268 +++++++++++++++++++++++++------------------------
+ 6 files changed, 174 insertions(+), 181 deletions(-)
+```
+
+
 ## v1.17.0 (2025-04-22 14:08)
 
 * **Automated Build Details:**
