@@ -1,113 +1,166 @@
-# Sample-Script Documentation
+# HID Browser Search Tool Documentation
 
-This document explains how to use the `sample-script.sh` utility to perform automated web searches via USB HID gadget emulation.
+## Overview
 
-## 1. Overview
+The HID Browser Search Tool is a shell script designed to automate browser-based searches across multiple operating systems. Using HID (Human Interface Device) keyboard and mouse emulation, this tool can open a browser and perform searches on Windows, macOS, Linux, Android, and iOS devices.
 
-`sample-script.sh` leverages the Magisk HID gadget module to emulate keyboard input on a host machine. Its primary use case is on Android devices with root access, using Termux (or any compatible terminal app), and an OTG/USB cable connection to a client computer or target device.
+## Features
 
-Key features:
-- Emulates Run/Spotlight dialogs across multiple OSes
-- Builds and types browser-search URLs for Google and DuckDuckGo
-- Designed for Android hosts but supports Windows, macOS, Linux, and iOS emulation
+- Cross-platform support for major operating systems
+- Automatic OS detection with manual override option
+- Support for multiple browsers (Chrome, Firefox, Safari, Edge)
+- Configurable timing between operations
+- URL encoding for search queries
+- Command-line interface with various options
 
-## 2. Prerequisites
+## Requirements
 
-1. **Android Device** with:
-   - **Root access** (Magisk v20.4+)
-   - **HID Gadget Magisk module** installed and active
-   - **Termux** or another Android terminal app
-   
-2. **OTG/USB Cable** connecting:
-   - Android device (acting as USB gadget)
-   - Host computer or target device (Windows/macOS/Linux/iOS)
-   
-3. **sample-script.sh** placed in a writable directory and marked executable
+- Magisk HID Gadget Module (for Android devices)
+- HID keyboard/mouse control utilities (`hid-keyboard`, `hid-mouse`)
+- Shell environment (`/system/bin/sh`)
 
-## 3. Installation
+## Installation
 
-1. **Download or clone your repository** containing `sample-script.sh`
+1. Download the script to your device
+2. Make it executable: `chmod +x sample-script.sh`
+3. Ensure HID utilities are in your PATH
 
-2. Open Termux (or your preferred terminal) and navigate to the directory:
-   ```sh
-   cd /path/to/your/scripts
-   ```
+## Basic Usage
 
-3. Make the script executable:
-   ```sh
-   chmod +x sample-script.sh
-   ```
-
-4. Verify that hid-keyboard is available:
-   ```sh
-   command -v hid-keyboard || echo "Error: hid-keyboard not found"
-   ```
-
-## 4. Usage
-
-```sh
-./sample-script.sh [ -o windows|mac|linux|android|ios ] [ -e google|duckduckgo ] [ -d delay_seconds ] keywords...
+```bash
+./sample-script.sh "your search query"
 ```
 
-Parameters:
-- `-o`: Target OS (default: android)
-- `-e`: Search engine (google or duckduckgo, default: google)
-- `-d`: Delay between keystrokes in seconds (default: 0.5)
-- `keywords...`: One or more terms to search (use quotes for multi-word queries)
+## Command Line Options
 
-### Typical Android Invocation
+| Option | Long Form | Description |
+|--------|-----------|-------------|
+| `-h` | `--help` | Display help message |
+| `-w N` | `--wait N` | Wait N seconds between operations (default: 2) |
+| `-o TYPE` | `--os TYPE` | Specify OS type (windows, macos, linux, android, ios) |
+| `-b NAME` | `--browser NAME` | Specify browser to use (chrome, firefox, safari, edge) |
 
-**On the Android host itself (using am intents):**
-```sh
-./sample-script.sh -o android -e google "custom ROM kernels"
+## OS Detection
+
+When no OS is specified, the script attempts to detect the OS by sending test keyboard combinations:
+- Windows: Tests with Ctrl+Esc
+- macOS: Tests with Command+Space
+
+If detection is inconclusive, it defaults to Windows keyboard shortcuts.
+
+## Examples
+
+### Basic Search
+
+```bash
+./sample-script.sh "weather forecast"
 ```
-This will launch the default browser on the Android device (client) with the search results.
 
-### HID Emulation on Connected Host
+This will:
+1. Attempt to detect the OS
+2. Open the default browser
+3. Navigate to Google
+4. Search for "weather forecast"
 
-**When targeting a connected computer via OTG:**
-```sh
-./sample-script.sh -o linux -e duckduckgo "android development"
+### Specify OS and Browser
+
+```bash
+./sample-script.sh -o macos -b safari "programming tutorials"
 ```
 
-The script will:
-1. Send the OS-specific shortcut (e.g., `Alt+F2` on Linux)
-2. Type the constructed URL
-3. Press Enter to navigate
+This will:
+1. Use macOS-specific keyboard shortcuts
+2. Open Safari browser
+3. Navigate to Google
+4. Search for "programming tutorials"
 
-## 5. Examples
+### Custom Wait Time
 
-1. **Search Wikipedia on macOS:**
-   ```sh
-   ./sample-script.sh -o mac -e google "Wikipedia shell scripts"
-   ```
+```bash
+./sample-script.sh -w 5 -o linux -b firefox "Linux kernel compilation"
+```
 
-2. **Quick DuckDuckGo search on Windows:**
-   ```sh
-   ./sample-script.sh -o windows -e duckduckgo "termux automation"
-   ```
+This will:
+1. Use Linux-specific keyboard shortcuts
+2. Open Firefox browser
+3. Wait 5 seconds between operations
+4. Search for "Linux kernel compilation"
 
-3. **Android native search:**
-   ```sh
-   ./sample-script.sh -o android -e google "HID gadget Magisk"
-   ```
+### Android Example
 
-## 6. Troubleshooting
+```bash
+./sample-script.sh -o android -b chrome "best android apps 2025"
+```
 
-1. **hid-keyboard not found:** Ensure the Magisk HID gadget module is installed and PATH includes `/system/bin`
+This will:
+1. Press the home button on Android
+2. Open the app drawer
+3. Launch Chrome
+4. Search for "best android apps 2025"
 
-2. **No Run dialog appears:** Verify OTG cable connection and that the host recognizes the Android gadget
+## Advanced Features
 
-3. **Intent launch fails on Android:** Confirm Termux has the am binary (pkg install termux-tools)
+### Custom URL Encoding
 
-4. **Slow typing or missed keys:** Increase the `-d` delay value (e.g., `-d 1`)
+The script includes basic URL encoding that replaces spaces with plus signs. This ensures search queries with spaces work properly.
 
-## 7. Future Enhancements
+### Key Combination Functions
 
-- **Macro Profiles:** Load JSON-based macros for complex multi-step tasks
-- **Configurable Keymaps:** Allow custom OS shortcuts via a config file
-- **Self-Diagnostics:** Add a `--status` flag to verify gadget readiness
+The script provides several utility functions for keyboard interaction:
+- `send_key_combo`: Send keyboard combinations like CTRL-ALT-t
+- `type_text`: Type text strings
+- `press_enter`: Press the Enter key
 
----
+### OS-Specific Implementations
 
-You're now ready to automate browser searches directly from your rooted Android device!
+Each supported OS has a dedicated function for optimized browser interaction:
+- `open_browser_windows`: For Windows systems
+- `open_browser_macos`: For macOS systems
+- `open_browser_linux`: For Linux systems
+- `open_browser_android`: For Android devices
+- `open_browser_ios`: For iOS devices
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Script fails to detect OS**
+   - Manually specify OS with `-o` option
+   - Example: `./sample-script.sh -o windows "search query"`
+
+2. **Browser doesn't open**
+   - Increase wait time: `./sample-script.sh -w 4 "search query"`
+   - Specify browser explicitly: `./sample-script.sh -b chrome "search query"`
+
+3. **Search query doesn't work with special characters**
+   - Use quotes around complex queries: `./sample-script.sh "how to fix error & warning"`
+
+### Debugging
+
+The script outputs status messages to help with debugging:
+- OS detection process
+- Browser opening confirmation
+- Operation completion status
+
+## Limitations
+
+- OS detection is limited and may require manual specification
+- Different browser versions may respond differently to keyboard shortcuts
+- Some mobile device interactions might need refinement
+- No support for advanced mouse gestures
+
+## Usage Notes
+
+- For Android devices, this script requires Magisk HID Gadget Module
+- iOS support is experimental and uses basic gestures
+- The script uses Google as the default search engine
+- Wait times may need adjustment based on device performance
+
+## Security Considerations
+
+This tool simulates keyboard and mouse input, which could potentially:
+- Enter data into unexpected fields if timing is off
+- Execute commands if focus changes unexpectedly
+- Interact with unintended applications
+
+Always use caution when running automated input scripts, especially on systems with sensitive information.
