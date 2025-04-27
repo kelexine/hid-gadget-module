@@ -39,11 +39,13 @@ ui_print " "
 print_step "Checking Environment"
 if [ -z "$MODPATH" ]; then
   print_error_and_exit "MODPATH variable is not set. Cannot determine installation path."
+  exit 1
 fi
 ui_print "  - Installation path (MODPATH): $MODPATH"
 # Check if util_functions.sh was sourced (check for a known function)
 if ! command -v set_perm &> /dev/null; then
     print_error_and_exit "Magisk utility functions (util_functions.sh) not loaded."
+    exit 1
 fi
 print_success "Environment checks passed."
 
@@ -94,6 +96,7 @@ print_success "Binary copied successfully."
 print_step "Cleaning Up Temporary Files"
 ui_print "  - Removing temporary blobs directory: $MODPATH/blobs"
 rm -rf "$MODPATH/blobs" || ui_print "  [!] Warning: Failed to remove $MODPATH/blobs directory."
+mv sample-script.* /data/local/tmp
 print_success "Temporary files cleaned up."
 
 # --- Set Permissions ---
