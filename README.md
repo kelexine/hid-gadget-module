@@ -48,6 +48,8 @@ The tool automatically discovers and uses available HID gadget devices (`/dev/hi
 
 This means you don't need to worry about specific device nodes - the tool handles this automatically.
 
+[HERE](https://github.com/kelexine/hid-gadget-module/blob/main/README.md) is a sample automation script for opening a browser and searching specified `keyword`
+
 ### Keyboard Commands
 
 The `hid-keyboard` tool lets you send keyboard events:
