@@ -3,6 +3,7 @@
 ## Overview
 
 The HID Browser Search Tool is a shell script designed to automate browser-based searches across multiple operating systems. Using HID (Human Interface Device) keyboard and mouse emulation, this tool can open a browser and perform searches on Windows, macOS, Linux, Android, and iOS devices.
+You can find the automation script here [sample-script.sh](https://github.com/kelexine/hid-gadget-module/blob/main/sample-script.sh)
 
 ## Features
 
