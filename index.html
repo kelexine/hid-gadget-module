@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HID Gadget Module for Magisk</title>
+    <style>
+        :root {
+            --primary: #00ffaa;
+            --secondary: #3a86ff;
+            --dark: #121212;
+            --darker: #0a0a0a;
+            --light: #f0f0f0;
+            --accent: #ff00aa;
+            --success: #00ff88;
+            --warning: #ffaa00;
+            --font-main: 'Segoe UI', 'Roboto', sans-serif;
+            --font-mono: 'Consolas', 'Courier New', monospace;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background-color: var(--dark);
+            color: var(--light);
+            font-family: var(--font-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+            position: relative;
+            min-height: 100vh;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(58, 134, 255, 0.15), transparent 40%),
+                radial-gradient(circle at 80% 70%, rgba(0, 255, 170, 0.1), transparent 30%);
+            z-index: -1;
+        }
+        
+        header {
+            background-color: var(--darker);
+            border-bottom: 1px solid rgba(0, 255, 170, 0.3);
+            padding: 1.5rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+        }
+        
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-shadow: 0 0 10px rgba(0, 255, 170, 0.5);
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo svg {
+            margin-right: 10px;
+            filter: drop-shadow(0 0 5px rgba(0, 255, 170, 0.5));
+        }
+        
+        nav ul {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+        
+        nav a {
+            color: var(--light);
+            text-decoration: none;
+            font-weight: 500;
+            position: relative;
+            transition: color 0.3s;
+            padding: 0.5rem 0;
+        }
+        
+        nav a:hover {
+            color: var(--primary);
+        }
+        
+        nav a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--primary);
+            transition: width 0.3s ease;
+        }
+        
+        nav a:hover::after {
+            width: 100%;
+        }
+        
+        .hero {
+            padding: 5rem 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, rgba(0, 255, 170, 0.05), rgba(58, 134, 255, 0.05));
+            z-index: -1;
+        }
+        
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            display: inline-block;
+        }
+        
+        .hero p {
+            font-size: 1.2rem;
+            max-width: 800px;
+            margin: 0 auto 2rem;
+            color: rgba(240, 240, 240, 0.8);
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            color: var(--dark);
+            font-weight: 600;
+            padding: 0.8rem 2rem;
+            border-radius: 50px;
+            text-decoration: none;
+            box-shadow: 0 5px 15px rgba(0, 255, 170, 0.3);
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .cta-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.7s;
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 255, 170, 0.4);
+        }
+        
+        .cta-button:hover::before {
+            left: 100%;
+        }
+        
+        .features {
+            padding: 4rem 0;
+            background-color: rgba(12, 12, 12, 0.7);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(58, 134, 255, 0.2);
+            border-bottom: 1px solid rgba(58, 134, 255, 0.2);
+        }
+        
+        .section-title {
+            text-align: center;
+            margin-bottom: 3rem;
+            position: relative;
+            padding-bottom: 1rem;
+        }
+        
+        .section-title h2 {
+            font-size: 2.5rem;
+            color: var(--primary);
+            display: inline-block;
+        }
+        
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+        
+        .feature-card {
+            background-color: rgba(18, 18, 18, 0.8);
+            border: 1px solid rgba(0, 255, 170, 0.2);
+            border-radius: 10px;
+            padding: 2rem;
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 20px rgba(0, 255, 170, 0.2);
+        }
+        
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            display: inline-block;
+            color: var(--primary);
+        }
+        
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--light);
+        }
+        
+        .feature-card ul {
+            padding-left: 1.5rem;
+            margin-top: 1rem;
+        }
+        
+        .feature-card li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .installation {
+            padding: 4rem 0;
+        }
+        
+        .installation-steps {
+            background-color: rgba(18, 18, 18, 0.8);
+            border: 1px solid rgba(58, 134, 255, 0.2);
+            border-radius: 10px;
+            padding: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .step {
+            display: flex;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+        
+        .step:last-child {
+            margin-bottom: 0;
+        }
+        
+        .step-number {
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            color: var(--dark);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            margin-right: 1rem;
+            flex-shrink: 0;
+        }
+        
+        .step-content {
+            padding-left: 1rem;
+            border-left: 1px dashed rgba(0, 255, 170, 0.3);
+            flex-grow: 1;
+        }
+        
+        .usage {
+            padding: 4rem 0;
+            background-color: rgba(12, 12, 12, 0.7);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(58, 134, 255, 0.2);
+            border-bottom: 1px solid rgba(58, 134, 255, 0.2);
+        }
+        
+        .usage-tabs {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .tabs-nav {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid rgba(58, 134, 255, 0.2);
+        }
+        
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--light);
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.3s;
+        }
+        
+        .tab-btn.active {
+            color: var(--primary);
+        }
+        
+        .tab-btn::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transition: width 0.3s ease;
+        }
+        
+        .tab-btn.active::after {
+            width: 100%;
+        }
+        
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.5s ease forwards;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .code-block {
+            background-color: var(--darker);
+            border: 1px solid rgba(0, 255, 170, 0.2);
+            border-radius: 5px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            overflow-x: auto;
+            position: relative;
+        }
+        
+        .code-title {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background-color: var(--primary);
+            color: var(--dark);
+            font-size: 0.8rem;
+            padding: 0.3rem 0.8rem;
+            border-radius: 0 5px 0 5px;
+            font-weight: 600;
+        }
+        
+        .code-block code {
+            color: var(--light);
+        }
+        
+        .cmd {
+            color: var(--primary);
+        }
+        
+        .arg {
+            color: var(--secondary);
+        }
+        
+        .str {
+            color: var(--accent);
+        }
+        
+        .comment {
+            color: #777;
+            font-style: italic;
+        }
+        
+        .troubleshooting {
+            padding: 4rem 0;
+        }
+        
+        .accordion {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .accordion-item {
+            background-color: rgba(18, 18, 18, 0.8);
+            border: 1px solid rgba(58, 134, 255, 0.2);
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+        
+        .accordion-header {
+            padding: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.3s;
+        }
+        
+        .accordion-header:hover {
+            background-color: rgba(0, 255, 170, 0.05);
+        }
+        
+        .accordion-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .accordion-icon {
+            width: 20px;
+            height: 20px;
+            position: relative;
+            transition: transform 0.3s;
+        }
+        
+        .accordion-icon::before,
+        .accordion-icon::after {
+            content: '';
+            position: absolute;
+            background-color: var(--primary);
+            transition: transform 0.3s;
+        }
+        
+        .accordion-icon::before {
+            width: 100%;
+            height: 2px;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+        }
+        
+        .accordion-icon::after {
+            width: 2px;
+            height: 100%;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .accordion-item.active .accordion-icon::after {
+            transform: translateX(-50%) rotate(90deg);
+        }
+        
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .accordion-item.active .accordion-content {
+            max-height: 500px;
+        }
+        
+        .accordion-body {
+            padding: 0 1.2rem 1.2rem;
+        }
+        
+        .footer {
+            background-color: var(--darker);
+            padding: 3rem 0;
+            text-align: center;
+            border-top: 1px solid rgba(0, 255, 170, 0.3);
+        }
+        
+        .footer-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+        
+        .footer-link {
+            color: var(--light);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .footer-link:hover {
+            color: var(--primary);
+        }
+        
+        .footer-bottom {
+            margin-top: 2rem;
+            font-size: 0.9rem;
+            color: rgba(240, 240, 240, 0.6);
+        }
+        
+        .pulse-effect {
+            position: relative;
+        }
+        
+        .pulse-effect::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            border-radius: inherit;
+            box-shadow: 0 0 0 0 rgba(0, 255, 170, 0.7);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 170, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 255, 170, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 170, 0); }
+        }
+        
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            nav ul {
+                gap: 1rem;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs-nav {
+                flex-wrap: wrap;
+            }
+            
+            .tab-btn {
+                padding: 0.8rem 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M4 6H20M4 12H20M4 18H20" stroke="#00FFAA" stroke-width="2" stroke-linecap="round"/>
+                        <rect x="5" y="3" width="6" height="6" rx="1" stroke="#00FFAA" stroke-width="2"/>
+                        <rect x="13" y="9" width="6" height="6" rx="1" stroke="#00FFAA" stroke-width="2"/>
+                        <rect x="5" y="15" width="6" height="6" rx="1" stroke="#00FFAA" stroke-width="2"/>
+                    </svg>
+                    HID Gadget Module
+                </div>
+                <nav>
+                    <ul>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#installation">Installation</a></li>
+                        <li><a href="#usage">Usage</a></li>
+                        <li><a href="#troubleshooting">Troubleshooting</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </header>
+    
+    <section class="hero">
+        <div class="container">
+            <h1>HID Gadget Module for Magisk</h1>
+            <p>Transform your Android device into a powerful USB Human Interface Device. Emulate keyboards, mice, and consumer control devices with this advanced Magisk module.</p>
+            <a href="https://github.com/kelexine/hid-gadget-module/releases" class="cta-button pulse-effect">Download Latest Release</a>
+        </div>
+    </section>
+    
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-title">
+                <h2>Features</h2>
+            </div>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⌨️</div>
+                    <h3>Keyboard Emulation</h3>
+                    <ul>
+                        <li>Full keyboard support with standard layout</li>
+                        <li>Function keys (F1-F12) and modifiers (Ctrl, Alt, Shift, GUI/Meta)</li>
+                        <li>Special keys: Enter, Escape, Tab, media keys, etc.</li>
+                        <li>Key combination support</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🖱️</div>
+                    <h3>Mouse Emulation</h3>
+                    <ul>
+                        <li>Relative motion control</li>
+                        <li>Button clicks (left, middle, right)</li>
+                        <li>Double-click functionality</li>
+                        <li>Press-and-hold actions</li>
+                        <li>Vertical and horizontal scrolling</li>
+                        <li>Smooth movements with variable speeds</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🎮</div>
+                    <h3>Consumer Control</h3>
+                    <ul>
+                        <li>Media playback controls (Play, Pause, Stop)</li>
+                        <li>Volume controls (Up, Down, Mute)</li>
+                        <li>Media navigation (Next, Previous, Forward, Rewind)</li>
+                        <li>Brightness controls</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section class="installation" id="installation">
+        <div class="container">
+            <div class="section-title">
+                <h2>Installation</h2>
+            </div>
+            
+            <div class="installation-steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <p>Download the latest release ZIP from the <a href="https://github.com/kelexine/hid-gadget-module/releases" style="color: var(--primary);">Releases page</a></p>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <p>Install through Magisk Manager:</p>
+                        <ul>
+                            <li>Open Magisk Manager</li>
+                            <li>Tap on Modules</li>
+                            <li>Tap "Install from storage"</li>
+                            <li>Select the downloaded ZIP file</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <p>Reboot your device after installation</p>
+                    </div>
+                </div>
+                
+                <h3 style="margin-top: 2rem; color: var(--primary);">Requirements</h3>
+                <ul style="margin-top: 1rem;">
+                    <li>Magisk v20.4 or newer</li>
+                    <li>A device with USB OTG support and kernel configfs support</li>
+                    <li>Root access</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+    
+    <section class="usage" id="usage">
+        <div class="container">
+            <div class="section-title">
+                <h2>Usage</h2>
+            </div>
+            
+            <p style="text-align: center; margin-bottom: 2rem;">
+                The tool automatically discovers and uses available HID gadget devices (<code>/dev/hidgX</code>).<br>
+                It dynamically identifies and assigns the first three HID gadget devices it finds:
+            </p>
+            
+            <div style="display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; margin-bottom: 3rem;">
+                <div style="background-color: rgba(18, 18, 18, 0.8); border: 1px solid rgba(0, 255, 170, 0.2); padding: 1rem; border-radius: 10px; text-align: center; width: 200px;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">⌨️</div>
+                    <p><strong>First device:</strong><br>Keyboard</p>
+                </div>
+                
+                <div style="background-color: rgba(18, 18, 18, 0.8); border: 1px solid rgba(0, 255, 170, 0.2); padding: 1rem; border-radius: 10px; text-align: center; width: 200px;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🖱️</div>
+                    <p><strong>Second device:</strong><br>Mouse</p>
+                </div>
+                
+                <div style="background-color: rgba(18, 18, 18, 0.8); border: 1px solid rgba(0, 255, 170, 0.2); padding: 1rem; border-radius: 10px; text-align: center; width: 200px;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🎮</div>
+                    <p><strong>Third device:</strong><br>Consumer controls</p>
+                </div>
+            </div>
+            
+            <div class="usage-tabs">
+                <div class="tabs-nav">
+                    <button class="tab-btn active" data-target="keyboard-tab">Keyboard</button>
+                    <button class="tab-btn" data-target="mouse-tab">Mouse</button>
+                    <button class="tab-btn" data-target="consumer-tab">Consumer Control</button>
+                </div>
+                
+                <div id="keyboard-tab" class="tab-content active">
+                    <h3>Keyboard Commands</h3>
+                    <p>The <code>hid-keyboard</code> tool lets you send keyboard events:</p>
+                    
+                    <div class="code-block">
+                        <div class="code-title">Bash</div>
+                        <code>
+                            <span class="comment"># Type text</span><br>
+                            <span class="cmd">hid-keyboard</span> <span class="str">"Hello World"</span><br><br>
+                            
+                            <span class="comment"># Press special keys</span><br>
+                            <span class="cmd">hid-keyboard</span> <span class="arg">F5</span><br>
+                            <span class="cmd">hid-keyboard</span> <span class="arg">ENTER</span><br>
+                            <span class="cmd">hid-keyboard</span> <span class="arg">ESC</span><br><br>
+                            
+                            <span class="comment"># Use modifiers</span><br>
+                            <span class="cmd">hid-keyboard</span> <span class="arg">CTRL-ALT-DELETE</span><br>
+                            <span class="cmd">hid-keyboard</span> <span class="arg">CTRL-C</span><br>
+                            <span class="cmd">hid-keyboard</span> <span class="arg">ALT-TAB</span><br><br>
+                            
+                            <span class="comment"># Press and hold keys</span><br>
+                            <span class="cmd">hid-keyboard</span> <span class="arg">--hold ALT</span><br>
+                            <span class="cmd">hid-keyboard</span> <span class="arg">TAB</span><br>
+                            <span class="cmd">hid-keyboard</span> <span class="arg">--release</span><br><br>
+                            
+                            <span class="comment"># Complex combinations</span><br>
+                            <span class="cmd">hid-keyboard</span> <span class="arg">CTRL-ALT-F4</span>
+                        </code>
+                    </div>
+                </div>
+                
+                <div id="mouse-tab" class="tab-content">
+                    <h3>Mouse Commands</h3>
+                    <p>The <code>hid-mouse</code> tool provides mouse control:</p>
+                    
+                    <div class="code-block">
+                        <div class="code-title">Bash</div>
+                        <code>
+                            <span class="comment"># Move the cursor (relative coordinates)</span><br>
+                            <span class="cmd">hid-mouse</span> <span class="arg">move 10 0</span>    <span class="comment"># Move right</span><br>
+                            <span class="cmd">hid-mouse</span> <span class="arg">move 0 -10</span>   <span class="comment"># Move up</span><br>
+                            <span class="cmd">hid-mouse</span> <span class="arg">move -5 5</span>    <span class="comment"># Move left and down</span><br><br>
+                            
+                            <span class="comment"># Click buttons</span><br>
+                            <span class="cmd">hid-mouse</span> <span class="arg">click</span>        <span class="comment"># Left click (default)</span><br>
+                            <span class="cmd">hid-mouse</span> <span class="arg">click right</span>  <span class="comment"># Right click</span><br>
+                            <span class="cmd">hid-mouse</span> <span class="arg">click middle</span> <span class="comment"># Middle click</span><br><br>
+                            
+                            <span class="comment"># Double-click</span><br>
+                            <span class="cmd">hid-mouse</span> <span class="arg">doubleclick</span><br><br>
+                            
+                            <span class="comment"># Press and hold</span><br>
+                            <span class="cmd">hid-mouse</span> <span class="arg">down</span>         <span class="comment"># Press and hold left button</span><br>
+                            <span class="cmd">hid-mouse</span> <span class="arg">move 20 20</span>   <span class="comment"># Drag while holding</span><br>
+                            <span class="cmd">hid-mouse</span> <span class="arg">up</span>           <span class="comment"># Release button</span><br><br>
+                            
+                            <span class="comment"># Scrolling</span><br>
+                            <span class="cmd">hid-mouse</span> <span class="arg">scroll 0 5</span>   <span class="comment"># Scroll down 5 units</span><br>
+                            <span class="cmd">hid-mouse</span> <span class="arg">scroll 0 -5</span>  <span class="comment"># Scroll up 5 units</span><br>
+                            <span class="cmd">hid-mouse</span> <span class="arg">scroll 5 0</span>   <span class="comment"># Scroll right 5 units</span>
