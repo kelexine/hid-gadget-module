@@ -573,15 +573,15 @@ int process_mouse(int argc, char *argv[]) {
         report[1] = x; // X movement
         report[2] = y; // Y movement
 
-        if (write(fd, report, MOUSE_REPORT_SIZE) != MOUSE_REPORT_SIZE) {
+        if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) {
             fprintf(stderr, "Error writing mouse move report: %s\n", strerror(errno));
             close(fd);
             return EXIT_FAILURE;
         }
         // Send a zero report immediately after move to stop it (good practice)
-        memset(report, 0, MOUSE_REPORT_SIZE);
+        memset(report, 0, g_mouse_report_size);
         usleep(1000); // Minimal delay needed? Maybe not for move.
-        if (write(fd, report, MOUSE_REPORT_SIZE) != MOUSE_REPORT_SIZE) {
+        if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) {
              fprintf(stderr, "Warning: Error writing zero move report: %s\n", strerror(errno));
              // Non-fatal, movement likely still occurred.
         }
@@ -601,7 +601,7 @@ int process_mouse(int argc, char *argv[]) {
 
         /* Press button */
         report[0] = button;
-        if (write(fd, report, MOUSE_REPORT_SIZE) != MOUSE_REPORT_SIZE) {
+        if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) {
             fprintf(stderr, "Error writing mouse button press report: %s\n", strerror(errno));
             close(fd);
             return EXIT_FAILURE;
@@ -627,12 +627,12 @@ int process_mouse(int argc, char *argv[]) {
 
         /* First click */
         report[0] = button;
-        if (write(fd, report, MOUSE_REPORT_SIZE) != MOUSE_REPORT_SIZE) { /* Press */
+        if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) { /* Press */
             fprintf(stderr, "Error writing mouse button press report (1st click): %s\n", strerror(errno)); close(fd); return EXIT_FAILURE;
         }
         usleep(30000);
         report[0] = 0;
-        if (write(fd, report, MOUSE_REPORT_SIZE) != MOUSE_REPORT_SIZE) { /* Release */
+        if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) { /* Release */
             fprintf(stderr, "Error writing mouse button release report (1st click): %s\n", strerror(errno)); close(fd); return EXIT_FAILURE;
         }
 
@@ -641,12 +641,12 @@ int process_mouse(int argc, char *argv[]) {
 
         /* Second click */
         report[0] = button;
-        if (write(fd, report, MOUSE_REPORT_SIZE) != MOUSE_REPORT_SIZE) { /* Press */
+        if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) { /* Press */
             fprintf(stderr, "Error writing mouse button press report (2nd click): %s\n", strerror(errno)); close(fd); return EXIT_FAILURE;
         }
         usleep(30000);
         report[0] = 0;
-        if (write(fd, report, MOUSE_REPORT_SIZE) != MOUSE_REPORT_SIZE) { /* Release */
+        if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) { /* Release */
             fprintf(stderr, "Error writing mouse button release report (2nd click): %s\n", strerror(errno)); close(fd); return EXIT_FAILURE;
         }
     } else if (strcmp(action, "down") == 0) {
@@ -664,7 +664,7 @@ int process_mouse(int argc, char *argv[]) {
 
         /* Press button without releasing */
         report[0] = button;
-        if (write(fd, report, MOUSE_REPORT_SIZE) != MOUSE_REPORT_SIZE) {
+        if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) {
             fprintf(stderr, "Error writing mouse button press report: %s\n", strerror(errno));
             close(fd);
             return EXIT_FAILURE;
@@ -682,7 +682,7 @@ int process_mouse(int argc, char *argv[]) {
         report[3] = 0;
         // report[4] = 0; // If using 5-byte report
 
-        if (write(fd, report, MOUSE_REPORT_SIZE) != MOUSE_REPORT_SIZE) {
+        if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) {
             fprintf(stderr, "Error writing mouse button release report: %s\n", strerror(errno));
             close(fd);
             return EXIT_FAILURE;
@@ -701,29 +701,24 @@ int process_mouse(int argc, char *argv[]) {
         int8_t vertical = (v_val_long > 127) ? 127 : ((v_val_long < -127) ? -127 : (int8_t)v_val_long);
         int8_t horizontal = (h_val_long > 127) ? 127 : ((h_val_long < -127) ? -127 : (int8_t)h_val_long);
 
-        // Standard HID mouse report places vertical scroll in byte 3.
-        // Horizontal scroll is less standard; sometimes byte 4, sometimes needs a different report ID.
-        // Assuming byte 3 for vertical scroll. We won't send horizontal scroll with this basic report.
-        // If your HID descriptor supports horizontal scroll in byte 4, adjust MOUSE_REPORT_SIZE and use report[4].
-        report[3] = vertical;   /* Vertical scroll wheel */
-
-        // If horizontal scroll is needed, you might need a different HID descriptor
-        // or check if your current descriptor uses byte 4 (or another byte).
-        // report[4] = horizontal; /* Hypothetical horizontal scroll */
-        if (horizontal != 0) {
-             fprintf(stderr, "Warning: Horizontal scroll not implemented in this basic report structure.\n");
+        // Vertical scroll always at byte 3; optional horizontal at byte 4 when enabled
+        report[3] = vertical;
+        if (g_mouse_support_hscroll && g_mouse_report_size >= 5) {
+            report[4] = horizontal;
+        } else if (horizontal != 0) {
+            fprintf(stderr, "Warning: Horizontal scroll requested but not enabled (set HID_MOUSE_HSCROLL=1).\n");
         }
 
 
-        if (write(fd, report, MOUSE_REPORT_SIZE) != MOUSE_REPORT_SIZE) {
+        if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) {
             fprintf(stderr, "Error writing mouse scroll report: %s\n", strerror(errno));
             close(fd);
             return EXIT_FAILURE;
         }
         // Send a zero report immediately after scroll to stop it
-        memset(report, 0, MOUSE_REPORT_SIZE);
+        memset(report, 0, g_mouse_report_size);
         usleep(10000); // Small delay before zero report
-        if (write(fd, report, MOUSE_REPORT_SIZE) != MOUSE_REPORT_SIZE) {
+        if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) {
              fprintf(stderr, "Warning: Error writing zero scroll report: %s\n", strerror(errno));
              // Non-fatal, scroll likely still occurred.
         }
@@ -801,6 +796,21 @@ int process_consumer(int argc, char *argv[]) {
 int main(int argc, char *argv[]) {
     // Allow environment overrides first
     load_env_devices();
+    // Configure optional mouse capabilities from env (HID_MOUSE_HSCROLL / HID_MOUSE_REPORT_SIZE)
+    {
+        const char *sz = getenv("HID_MOUSE_REPORT_SIZE");
+        const char *hs = getenv("HID_MOUSE_HSCROLL");
+        if (sz) {
+            int v = atoi(sz);
+            if (v == 5 || v == 4) {
+                g_mouse_report_size = v;
+            }
+        }
+        if (hs && (strcmp(hs, "1") == 0 || strcasecmp(hs, "true") == 0 || strcasecmp(hs, "yes") == 0)) {
+            g_mouse_support_hscroll = 1;
+            if (g_mouse_report_size < 5) g_mouse_report_size = 5;
+        }
+    }
     // Attempt to discover devices; may return fewer than 3 and that's OK.
     find_hidg_devices();
 
