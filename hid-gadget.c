@@ -331,6 +331,15 @@ int process_keyboard(int argc, char *argv[]) {
     int release_keys = 0;
     uint8_t modifiers = 0;
     int i, seq_start = 0;
+    // Default delay per key (ms), can be overridden by env HID_KEY_DELAY_MS or --delay wrapper
+    int key_delay_ms = 10;
+    {
+        const char *env_delay = getenv("HID_KEY_DELAY_MS");
+        if (env_delay) {
+            int v = atoi(env_delay);
+            if (v >= 0 && v <= 5000) key_delay_ms = v;
+        }
+    }
 
     // --- Check if device path is valid ---
     if (!g_keyboard_device) {
@@ -484,7 +493,9 @@ int process_keyboard(int argc, char *argv[]) {
                         }
 
                         /* Small delay between keypresses */
-                        usleep(10000); // 10ms
+                        if (key_delay_ms > 0) {
+                            usleep((useconds_t)key_delay_ms * 1000);
+                        }
                     }
                 } else {
                      fprintf(stderr, "Warning: Character '%c' (ASCII %d) not mapped to HID usage code.\n", c, (unsigned char)c);

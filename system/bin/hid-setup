@@ -23,6 +23,15 @@ CONSUMER_DEV="${HID_CONSUMER_DEV:-/dev/hidg3}"
 
 # Mouse report settings (support optional horizontal scroll -> 5-byte report)
 MOUSE_REPORT_LEN=4
+
+# Read module property if present (installed location)
+MOD_INST_PROP="/data/adb/modules/hid-gadget/module.prop"
+if [ -f "$MOD_INST_PROP" ]; then
+  if grep -qi '^mouse\.hscroll=\s*true' "$MOD_INST_PROP"; then
+    export HID_MOUSE_HSCROLL=1
+  fi
+fi
+
 if [ "${HID_MOUSE_HSCROLL:-0}" = "1" ] || [ "${HID_MOUSE_REPORT_SIZE:-}" = "5" ]; then
     MOUSE_REPORT_LEN=5
 fi
