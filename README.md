@@ -99,9 +99,11 @@ hid-mouse move 20 20   # Drag while holding
 hid-mouse up           # Release button
 
 # Scrolling
+# Vertical scrolling works with the default descriptor
 hid-mouse scroll 0 5   # Scroll down 5 units
 hid-mouse scroll 0 -5  # Scroll up 5 units
-hid-mouse scroll 5 0   # Scroll right 5 units
+# Horizontal scrolling depends on your HID descriptor (not enabled by default)
+# hid-mouse scroll 5 0   # Horizontal scroll requires a 5-byte mouse report descriptor
 ```
 
 ### Consumer Control Commands
@@ -136,16 +138,23 @@ hid-consumer BRIGHTNESS-
 4. Reboot your device
 5. Check logs with `logcat | grep hidg`
 
-### HID Device Detection Issues
+### HID Device Detection and Overrides
 
-If the automatic device detection isn't working:
+If automatic device detection isn't working or your device nodes are non-standard, you can override them via environment variables:
 
 ```bash
-# Run the command with no arguments to see which devices were detected
-hid-keyboard
+export HID_KEYBOARD_DEV=/dev/hidg3
+export HID_MOUSE_DEV=/dev/hidg1
+export HID_CONSUMER_DEV=/dev/hidg2
 ```
 
-The command will show which device paths were dynamically assigned to keyboard, mouse, and consumer functions.
+Commands work with any available subset of devices. For a quick usage overview:
+
+```bash
+hid-mouse --help
+hid-keyboard --help
+hid-consumer --help
+```
 
 ### Permission Issues
 

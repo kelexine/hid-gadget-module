@@ -20,6 +20,5 @@ service hidgadget_setup /system/bin/hid-setup
     # This context must be defined and granted permissions in a sepolicy.rule file
     seclabel u:r:magisk_hidgadget_service:s0
 
-# Start the service once the system is booted
-on property:sys.boot_completed=1
-    start hidgadget_setup
+# Intentionally do not auto-start at boot to avoid duplication with Magisk service.sh.
+# The Magisk service script monitors sys.usb.config and runs hid-setup when 'hid' is active.
