@@ -1,4 +1,23 @@
-## v1.23.1 (2025-08-12 20:41)
+# Changelog
+
+## v1.23.1 (2025-08-12 20:45)
+
+- Version code: 12301
+- Changes since v1.23.0:
+  - Summary:  8 files changed, 12 insertions(+), 8 deletions(-)
+
+### Commits
+- 100afe8 Automated build: v1.23.1 (kelexine)
+### Files changed
+M	CHANGELOG.md
+M	blobs/arm/hid-gadget
+M	blobs/arm64/hid-gadget
+M	blobs/x86/hid-gadget
+M	blobs/x86_64/hid-gadget
+M	hid-gadget.c
+M	module.prop
+M	update.json
+
 
 - Automated build: v1.23.1 (code: 12301)
 
