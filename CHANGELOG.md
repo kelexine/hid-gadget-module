@@ -1,12 +1,13 @@
 # Changelog
 
-## v1.23.1 (2025-08-12 20:45)
+## v1.23.1 (2025-08-12 20:58)
 
 - Version code: 12301
 - Changes since v1.23.0:
-  - Summary:  8 files changed, 12 insertions(+), 8 deletions(-)
+  - Summary:  8 files changed, 32 insertions(+), 9 deletions(-)
 
 ### Commits
+- 44ad7e2 Automated build: v1.23.1 (kelexine)
 - 100afe8 Automated build: v1.23.1 (kelexine)
 ### Files changed
 M	CHANGELOG.md
@@ -18,8 +19,6 @@ M	hid-gadget.c
 M	module.prop
 M	update.json
 
-
-- Automated build: v1.23.1 (code: 12301)
 
 ## v1.23.0 (2025-08-12 20:36)
 
