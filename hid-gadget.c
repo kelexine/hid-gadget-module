@@ -213,6 +213,23 @@ void cleanup_device_paths() {
     g_consumer_device = NULL;
 }
 
+/* Load device overrides from environment variables if provided */
+void load_env_devices() {
+    const char *kb = getenv("HID_KEYBOARD_DEV");
+    const char *ms = getenv("HID_MOUSE_DEV");
+    const char *cc = getenv("HID_CONSUMER_DEV");
+    struct stat st;
+    if (kb && stat(kb, &st) == 0 && S_ISCHR(st.st_mode)) {
+        g_keyboard_device = strdup(kb);
+    }
+    if (ms && stat(ms, &st) == 0 && S_ISCHR(st.st_mode)) {
+        g_mouse_device = strdup(ms);
+    }
+    if (cc && stat(cc, &st) == 0 && S_ISCHR(st.st_mode)) {
+        g_consumer_device = strdup(cc);
+    }
+}
+
 
 void print_usage(const char *prog_name) {
     // Ensure devices were found before printing usage
@@ -240,22 +257,6 @@ void print_usage(const char *prog_name) {
     fprintf(stderr, "    scroll V [H]   - Scroll V(vertical) H(horizontal, optional) units (-127 to 127)\n");
 
     fprintf(stderr, "\nConsumer mode (uses %s):\n", g_consumer_device ? g_consumer_device : "<none>");
-/* Load device overrides from environment variables if provided */
-void load_env_devices() {
-    const char *kb = getenv("HID_KEYBOARD_DEV");
-    const char *ms = getenv("HID_MOUSE_DEV");
-    const char *cc = getenv("HID_CONSUMER_DEV");
-    struct stat st;
-    if (kb && stat(kb, &st) == 0 && S_ISCHR(st.st_mode)) {
-        g_keyboard_device = strdup(kb);
-    }
-    if (ms && stat(ms, &st) == 0 && S_ISCHR(st.st_mode)) {
-        g_mouse_device = strdup(ms);
-    }
-    if (cc && stat(cc, &st) == 0 && S_ISCHR(st.st_mode)) {
-        g_consumer_device = strdup(cc);
-    }
-}
     fprintf(stderr, "  %s consumer [action]\n", prog_name);
     fprintf(stderr, "    actions: PLAY, PAUSE, MUTE, VOL+, VOL-, etc. (case-insensitive)\n");
 
