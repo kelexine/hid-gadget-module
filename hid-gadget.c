@@ -538,9 +538,9 @@ int process_keyboard(int argc, char *argv[]) {
 /* Process mouse commands */
 int process_mouse(int argc, char *argv[]) {
     int fd;
-    // Mouse report: [Buttons] [X delta] [Y delta] [VScroll delta] [HScroll delta (optional, depends on descriptor)]
-    // Assuming standard 4-byte report: Buttons, X, Y, VScroll
-    uint8_t report[MOUSE_REPORT_SIZE] = {0};
+    // Mouse report: [Buttons] [X delta] [Y delta] [VScroll delta] [HScroll delta (optional)]
+    // Use a buffer large enough for both 4- and 5-byte reports
+    uint8_t report[8] = {0};
     // Some descriptors might use 5 bytes to include HScroll separately.
     // Adapt MOUSE_REPORT_SIZE and indexing if necessary.
 
