@@ -16,10 +16,10 @@ KEYBOARD_FUNC="hid.gs1"
 MOUSE_FUNC="hid.gs2"
 CONSUMER_FUNC="hid.gs3"
 
-# Corresponding device nodes
-KEYBOARD_DEV="/dev/hidg1"
-MOUSE_DEV="/dev/hidg2"
-CONSUMER_DEV="/dev/hidg3"
+# Corresponding device nodes (overridable via environment for non-standard numbering)
+KEYBOARD_DEV="${HID_KEYBOARD_DEV:-/dev/hidg1}"
+MOUSE_DEV="${HID_MOUSE_DEV:-/dev/hidg2}"
+CONSUMER_DEV="${HID_CONSUMER_DEV:-/dev/hidg3}"
 
 # Corresponding device node major/minor numbers (assuming standard HID gadget major 243)
 # Minor numbers usually match the function index (0, 1, 2, ...)

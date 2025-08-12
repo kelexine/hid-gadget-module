@@ -21,6 +21,7 @@
 #include <linux/types.h>
 #include <ctype.h>
 #include <dirent.h> // For directory operations
+#include <limits.h>
 
 /* If the kernel headers are not available, we define our own structures */
 #ifndef HID_MAX_DESCRIPTOR_SIZE
@@ -165,8 +166,8 @@ int find_hidg_devices() {
     closedir(dir);
 
     if (count < 3) {
-        fprintf(stderr, "Error: Found only %d /dev/hidg* device(s), need at least 3.\n", count);
-        return count; // Return the number found
+        // Not fatal: caller may only need a subset (e.g., keyboard or mouse)
+        // Return the number found for the caller to decide.
     }
 
     // Sort the devices by number
@@ -175,17 +176,22 @@ int find_hidg_devices() {
     // Construct full paths and assign to global variables
     char path_buffer[PATH_MAX];
 
-    snprintf(path_buffer, sizeof(path_buffer), "%s/%s", dev_dir, devices[0].name);
-    g_keyboard_device = strdup(path_buffer);
-
-    snprintf(path_buffer, sizeof(path_buffer), "%s/%s", dev_dir, devices[1].name);
-    g_mouse_device = strdup(path_buffer);
-
-    snprintf(path_buffer, sizeof(path_buffer), "%s/%s", dev_dir, devices[2].name);
-    g_consumer_device = strdup(path_buffer);
+    // Only fill device paths that haven't been set by environment overrides
+    if (count >= 1 && g_keyboard_device == NULL) {
+        snprintf(path_buffer, sizeof(path_buffer), "%s/%s", dev_dir, devices[0].name);
+        g_keyboard_device = strdup(path_buffer);
+    }
+    if (count >= 2 && g_mouse_device == NULL) {
+        snprintf(path_buffer, sizeof(path_buffer), "%s/%s", dev_dir, devices[1].name);
+        g_mouse_device = strdup(path_buffer);
+    }
+    if (count >= 3 && g_consumer_device == NULL) {
+        snprintf(path_buffer, sizeof(path_buffer), "%s/%s", dev_dir, devices[2].name);
+        g_consumer_device = strdup(path_buffer);
+    }
 
     // Check if strdup succeeded
-    if (!g_keyboard_device || !g_mouse_device || !g_consumer_device) {
+    if ((count >= 1 && !g_keyboard_device) || (count >= 2 && !g_mouse_device) || (count >= 3 && !g_consumer_device)) {
         perror("Error allocating memory for device paths");
         // Free any allocated memory before returning
         free(g_keyboard_device); g_keyboard_device = NULL;
@@ -194,7 +200,7 @@ int find_hidg_devices() {
         return -1;
     }
 
-    return 3; // Success, found and assigned 3 devices
+    return count;
 }
 
 // Function to free allocated device path strings
@@ -210,14 +216,10 @@ void cleanup_device_paths() {
 
 void print_usage(const char *prog_name) {
     // Ensure devices were found before printing usage
-    if (!g_keyboard_device || !g_mouse_device || !g_consumer_device) {
+    if (!g_keyboard_device && !g_mouse_device && !g_consumer_device) {
          fprintf(stderr, "Error: HID Gadget devices not initialized. Cannot print usage.\n");
          // Attempt to find them again, or provide a generic message
-         if (find_hidg_devices() < 3) {
-              fprintf(stderr, "Failed to find required /dev/hidg* devices.\n");
-              fprintf(stderr, "Usage: %s [keyboard|mouse|consumer] [options]\n", prog_name);
-              exit(EXIT_FAILURE);
-         }
+         find_hidg_devices();
     }
 
     fprintf(stderr, "Usage: %s [keyboard|mouse|consumer] [options]\n", prog_name);
@@ -228,7 +230,7 @@ void print_usage(const char *prog_name) {
     fprintf(stderr, "    special keys: F1-F12, ESC, TAB, etc. (case-insensitive)\n");
     fprintf(stderr, "    sequence: String of characters or a single special key name.\n");
 
-    fprintf(stderr, "\nMouse mode (uses %s):\n", g_mouse_device);
+    fprintf(stderr, "\nMouse mode (uses %s):\n", g_mouse_device ? g_mouse_device : "<none>");
     fprintf(stderr, "  %s mouse [action] [parameters]\n", prog_name);
     fprintf(stderr, "    move X Y       - Move mouse by X,Y relative units (-127 to 127)\n");
     fprintf(stderr, "    click [button] - Click button (left(default),right,middle)\n");
@@ -237,7 +239,23 @@ void print_usage(const char *prog_name) {
     fprintf(stderr, "    up             - Release all held buttons\n");
     fprintf(stderr, "    scroll V [H]   - Scroll V(vertical) H(horizontal, optional) units (-127 to 127)\n");
 
-    fprintf(stderr, "\nConsumer mode (uses %s):\n", g_consumer_device);
+    fprintf(stderr, "\nConsumer mode (uses %s):\n", g_consumer_device ? g_consumer_device : "<none>");
+/* Load device overrides from environment variables if provided */
+void load_env_devices() {
+    const char *kb = getenv("HID_KEYBOARD_DEV");
+    const char *ms = getenv("HID_MOUSE_DEV");
+    const char *cc = getenv("HID_CONSUMER_DEV");
+    struct stat st;
+    if (kb && stat(kb, &st) == 0 && S_ISCHR(st.st_mode)) {
+        g_keyboard_device = strdup(kb);
+    }
+    if (ms && stat(ms, &st) == 0 && S_ISCHR(st.st_mode)) {
+        g_mouse_device = strdup(ms);
+    }
+    if (cc && stat(cc, &st) == 0 && S_ISCHR(st.st_mode)) {
+        g_consumer_device = strdup(cc);
+    }
+}
     fprintf(stderr, "  %s consumer [action]\n", prog_name);
     fprintf(stderr, "    actions: PLAY, PAUSE, MUTE, VOL+, VOL-, etc. (case-insensitive)\n");
 
@@ -778,13 +796,10 @@ int process_consumer(int argc, char *argv[]) {
 }
 
 int main(int argc, char *argv[]) {
-    // Find devices *before* parsing arguments, as print_usage might be called early
-    int devices_found = find_hidg_devices();
-    if (devices_found < 3) {
-        // Error message already printed by find_hidg_devices or print_usage
-        cleanup_device_paths(); // Clean up any partially allocated paths
-        return EXIT_FAILURE;
-    }
+    // Allow environment overrides first
+    load_env_devices();
+    // Attempt to discover devices; may return fewer than 3 and that's OK.
+    find_hidg_devices();
 
     // Register cleanup function to free memory on exit
     atexit(cleanup_device_paths);
@@ -800,10 +815,13 @@ int main(int argc, char *argv[]) {
     // and the subsequent arguments starting from argv[1]
     int result = EXIT_FAILURE; // Default result
     if (strcmp(command, "keyboard") == 0) {
+        if (!g_keyboard_device) { fprintf(stderr, "Error: No keyboard device available. Set HID_KEYBOARD_DEV or run setup.\n"); return EXIT_FAILURE; }
         result = process_keyboard(argc - 1, &argv[1]);
     } else if (strcmp(command, "mouse") == 0) {
+        if (!g_mouse_device) { fprintf(stderr, "Error: No mouse device available. Set HID_MOUSE_DEV or run setup.\n"); return EXIT_FAILURE; }
         result = process_mouse(argc - 1, &argv[1]);
     } else if (strcmp(command, "consumer") == 0) {
+        if (!g_consumer_device) { fprintf(stderr, "Error: No consumer device available. Set HID_CONSUMER_DEV or run setup.\n"); return EXIT_FAILURE; }
         result = process_consumer(argc - 1, &argv[1]);
     } else {
         fprintf(stderr, "Error: Unknown command '%s'\n", command);
