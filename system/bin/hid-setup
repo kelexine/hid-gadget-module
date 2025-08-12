@@ -21,6 +21,12 @@ KEYBOARD_DEV="${HID_KEYBOARD_DEV:-/dev/hidg1}"
 MOUSE_DEV="${HID_MOUSE_DEV:-/dev/hidg2}"
 CONSUMER_DEV="${HID_CONSUMER_DEV:-/dev/hidg3}"
 
+# Mouse report settings (support optional horizontal scroll -> 5-byte report)
+MOUSE_REPORT_LEN=4
+if [ "${HID_MOUSE_HSCROLL:-0}" = "1" ] || [ "${HID_MOUSE_REPORT_SIZE:-}" = "5" ]; then
+    MOUSE_REPORT_LEN=5
+fi
+
 # Corresponding device node major/minor numbers (assuming standard HID gadget major 243)
 # Minor numbers usually match the function index (0, 1, 2, ...)
 # Since we start functions at gs1, the minor numbers will be 1, 2, 3
@@ -81,9 +87,14 @@ echo "Creating mouse function ${MOUSE_FUNC}..."
 mkdir -p "${GADGET_DIR}/functions/${MOUSE_FUNC}" || { echo "Error: Failed to create ${GADGET_DIR}/functions/${MOUSE_FUNC}. Check SELinux."; exit 1; }
 echo 2 > "${GADGET_DIR}/functions/${MOUSE_FUNC}/protocol"  # Mouse (Boot Protocol)
 echo 1 > "${GADGET_DIR}/functions/${MOUSE_FUNC}/subclass"  # Boot Interface Subclass
-echo 4 > "${GADGET_DIR}/functions/${MOUSE_FUNC}/report_length"
-# Read report descriptor from file
-cat "${MODPATH}/system/etc/hid/mouse-desc.bin" > "${GADGET_DIR}/functions/${MOUSE_FUNC}/report_desc" || { echo "Error: Failed to write mouse report_desc. Check file existence and SELinux."; exit 1; }
+echo ${MOUSE_REPORT_LEN} > "${GADGET_DIR}/functions/${MOUSE_FUNC}/report_length"
+# Write report descriptor: default (4-byte) or H-scroll (5-byte)
+if [ "$MOUSE_REPORT_LEN" = "5" ]; then
+    # 5-byte mouse: buttons + X,Y,Wheel (Generic Desktop) + HWheel (Consumer AC Pan)
+    printf '\x05\x01\x09\x02\xA1\x01\x09\x01\xA1\x00\x05\x09\x19\x01\x29\x03\x15\x00\x25\x01\x95\x03\x75\x01\x81\x02\x95\x01\x75\x05\x81\x03\x05\x01\x09\x30\x09\x31\x09\x38\x15\x81\x25\x7f\x75\x08\x95\x03\x81\x06\x05\x0C\x0A\x38\x02\x95\x01\x81\x06\xC0\xC0' > "${GADGET_DIR}/functions/${MOUSE_FUNC}/report_desc" || { echo "Error: Failed to write mouse report_desc (5-byte)."; exit 1; }
+else
+    cat "${MODPATH}/system/etc/hid/mouse-desc.bin" > "${GADGET_DIR}/functions/${MOUSE_FUNC}/report_desc" || { echo "Error: Failed to write mouse report_desc. Check file existence and SELinux."; exit 1; }
+fi
 
 # Create consumer control function
 echo "Creating consumer control function ${CONSUMER_FUNC}..."

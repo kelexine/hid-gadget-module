@@ -39,6 +39,8 @@ char *g_consumer_device = NULL;
 
 /* Mouse report descriptor */
 #define MOUSE_REPORT_SIZE 4 /* Buttons(1), X(1), Y(1), Wheel(1) */
+static int g_mouse_report_size = MOUSE_REPORT_SIZE; /* Can be 5 when H-scroll enabled */
+static int g_mouse_support_hscroll = 0;
 
 /* Consumer control report descriptor */
 #define CONSUMER_REPORT_SIZE 2
