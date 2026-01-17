@@ -36,4 +36,4 @@ fi
 export HID_KEY_DELAY_MS="$DELAY"
 
 # Just forward all arguments to hid-gadget
-exec hid-gadget keyboard "$@"
+exec "$(dirname "$0")/hid-gadget" keyboard "$@"

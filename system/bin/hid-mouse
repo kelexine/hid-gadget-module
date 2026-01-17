@@ -25,4 +25,4 @@ if [ -f "$MOD_PROP" ] && grep -qi '^mouse\.hscroll=\s*true' "$MOD_PROP"; then
 fi
 
 # Forward all arguments to hid-gadget
-exec hid-gadget mouse "$@"
+exec "$(dirname "$0")/hid-gadget" mouse "$@"

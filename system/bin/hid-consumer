@@ -12,4 +12,4 @@ if [ $# -lt 1 ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
 fi
 
 # Forward all arguments to hid-gadget
-exec hid-gadget consumer "$@"
+exec "$(dirname "$0")/hid-gadget" consumer "$@"

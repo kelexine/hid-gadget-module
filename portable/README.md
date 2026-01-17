@@ -1,4 +1,4 @@
-# HID Gadget Module for Magisk (v1.23.5)
+# HID Gadget Module for Magisk (v1.23.3)
 
 This Magisk module provides USB HID (Human Interface Device) gadget functionality for Android devices. It allows your device to act as a USB keyboard, mouse, or consumer control device.
 
@@ -23,7 +23,6 @@ This Magisk module provides USB HID (Human Interface Device) gadget functionalit
 | **SHIFT** | - |
 | **ALT** | - |
 | **GUI** | `WIN`, `META`, `SUPER` |
-| **RGUI** | `RWIN`, `RMETA`, `RSUPER` |
 
 ### Special & Function Keys
 `F1` through `F12`, `INSERT`, `HOME`, `PAGEUP`, `DELETE`, `END`, `PAGEDOWN`, `RIGHT`, `LEFT`, `DOWN`, `UP`, `NUMLOCK`, `ESC`, `TAB`, `CAPSLOCK`, `PRINTSCREEN`, `SCROLLLOCK`, `PAUSE`, `BACKSPACE`, `RETURN`, `ENTER`, `SPACE`.

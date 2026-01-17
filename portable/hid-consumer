@@ -1,0 +1,17 @@
+#!/bin/sh
+# Universal hid-consumer wrapper
+ARCH=$(uname -m)
+BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+    HID_GADGET="$BASE_DIR/bin/arm64/hid-gadget"
+else
+    HID_GADGET="$BASE_DIR/bin/x86_64/hid-gadget"
+fi
+
+if [ ! -f "$HID_GADGET" ]; then
+    echo "Error: hid-gadget binary not found for architecture $ARCH"
+    exit 1
+fi
+
+exec "$HID_GADGET" consumer "$@"

@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.23.5 (2026-01-17)
+## v1.23.3 (2026-01-17)
 
 - **Fixed Keyboard Modifier Logic**: Rewrote `parse_modifiers` to correctly handle single modifiers and composite strings like `CTRL-C`.
 - **Universal Static Binaries**: All binaries are now statically linked with `musl` using Zig CC, ensuring zero library dependencies on Android (Bionic) or Linux (glibc).
