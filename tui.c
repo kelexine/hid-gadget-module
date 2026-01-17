@@ -28,7 +28,7 @@ typedef struct {
   float width;
 } Key;
 
-static Key layout[][16] = {{{"ESC", "ESC", 1},
+static Key layout[][20] = {{{"ESC", "ESC", 1},
                             {"F1", "F1", 1},
                             {"F2", "F2", 1},
                             {"F3", "F3", 1},
@@ -41,6 +41,8 @@ static Key layout[][16] = {{{"ESC", "ESC", 1},
                             {"F10", "F10", 1},
                             {"F11", "F11", 1},
                             {"F12", "F12", 1},
+                            {"HOME", "HOME", 1},
+                            {"END", "END", 1},
                             {"DEL", "DELETE", 1},
                             {NULL, NULL, 0}},
                            {{"`", "`", 1},
@@ -136,16 +138,24 @@ void draw_text(int x, int y, uintattr_t fg, uintattr_t bg, const char *str) {
 void render_keyboard() {
   tb_clear();
   int term_w = tb_width();
+  int term_h = tb_height();
 
   draw_text(2, 0, TB_WHITE | TB_BOLD, TB_DEFAULT,
-            "HID C-TUI v1.23.7 | ESC to quit");
+            "HID C-TUI v1.24.0 | CTRL+ALT+Q to quit");
 
   int scale = (term_w - 4) / 16;
   if (scale < 2)
     scale = 2;
 
   render_key_count = 0;
-  int ky = 2;
+  // Calculate vertical start to align to bottom
+  int total_rows = 0;
+  while (layout[total_rows][0].label != NULL)
+    total_rows++;
+  int ky = term_h - (total_rows * 3) - 1;
+  if (ky < 2)
+    ky = 2;
+
   for (int r = 0; layout[r][0].label != NULL; r++) {
     int kx = 2;
     for (int k = 0; layout[r][k].label != NULL; k++) {
@@ -257,8 +267,14 @@ int run_tui(void) {
       break;
 
     if (ev.type == TB_EVENT_KEY) {
-      if (ev.key == TB_KEY_ESC)
+      if ((ev.mod & TB_MOD_CTRL) && (ev.mod & TB_MOD_ALT) &&
+          (ev.ch == 'q' || ev.ch == 'Q'))
         break;
+
+      if (ev.key == TB_KEY_ESC) {
+        handle_input("ESC");
+        continue;
+      }
 
       // Physical keyboard mapping
       if (ev.key == TB_KEY_ENTER)

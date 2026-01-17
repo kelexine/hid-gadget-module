@@ -77,39 +77,38 @@ static int g_mouse_support_hscroll = 0;
 
 /* Keyboard usage table - mapping ASCII characters to HID usage codes */
 static const uint8_t usage_table[128] = {
-    0,  0,  0,  0,  0,
-    0,  0,  0, /* 0-7 */
-    42, 43, 40, 0,  0,
-    0,  0,  0, /* 8-15 (Backspace, Tab, Enter) */
-    0,  0,  0,  0,  0,
-    0,  0,  0, /* 16-23 */
-    0,  0,  0,  41, 0,
-    0,  0,  0, /* 24-31 (Escape) */
-    44, 30, 52, 32, 33,
-    34, 35, 51, /* 32-39 (Space, 1, ', 3, 4, 5, 6, ;) - Adjusted for US layout
-                   symbols */
-    47, 48, 46, 45, 54,
-    56, 55, 36, /* 40-47 ((,),*,+,,,-./, 7) - Adjusted */
-    39, 30, 31, 32, 33,
-    34, 35, 36, /* 48-55 (0-7) */
-    37, 38, 51, 46, 54,
-    45, 55, 52, /* 56-63 (8,9,:,=,<,>,?,') - Adjusted */
-    31, 4,  5,  6,  7,
-    8,  9,  10, /* 64-71 (@(Shift+2),A-G) */
-    11, 12, 13, 14, 15,
-    16, 17, 18, /* 72-79 (H-O) */
-    19, 20, 21, 22, 23,
-    24, 25, 26, /* 80-87 (P-W) */
-    27, 28, 29, 47, 49,
-    48, 33, 38, /* 88-95 (X-Z,[,\|],^ (Shift+6)) - Adjusted */
-    53, 4,  5,  6,  7,
-    8,  9,  10, /* 96-103 (`,a-g) */
-    11, 12, 13, 14, 15,
-    16, 17, 18, /* 104-111 (h-o) */
-    19, 20, 21, 22, 23,
-    24, 25, 26, /* 112-119 (p-w) */
-    27, 28, 29, 47, 49,
-    48, 53, 0 /* 120-127 (x-z,{,|,},~) - Adjusted */
+    0,  0,  0,  0,
+    0,  0,  0,  0, /* 0-7 */
+    42, 43, 40, 0,
+    0,  0,  0,  0, /* 8-15 (Backspace, Tab, Enter) */
+    0,  0,  0,  0,
+    0,  0,  0,  0, /* 16-23 */
+    0,  0,  0,  41,
+    0,  0,  0,  0, /* 24-31 (Escape) */
+    44, 30, 52, 32,
+    33, 34, 35, 52, /* 32-39 (Space, !, ", #, $, %, &, ') */
+    38, 39, 37, 46,
+    54, 45, 55, 56, /* 40-47 ((, ), *, +, ,, -, ., /) */
+    39, 30, 31, 32,
+    33, 34, 35, 36, /* 48-55 (0-7) */
+    37, 38, 51, 51,
+    54, 46, 55, 56, /* 56-63 (8, 9, :, ;, <, =, >, ?) */
+    31, 4,  5,  6,
+    7,  8,  9,  10, /* 64-71 (@(Shift+2),A-G) */
+    11, 12, 13, 14,
+    15, 16, 17, 18, /* 72-79 (H-O) */
+    19, 20, 21, 22,
+    23, 24, 25, 26, /* 80-87 (P-W) */
+    27, 28, 29, 47,
+    49, 48, 33, 38, /* 88-95 (X-Z,[,\|],^ (Shift+6)) - Adjusted */
+    53, 4,  5,  6,
+    7,  8,  9,  10, /* 96-103 (`,a-g) */
+    11, 12, 13, 14,
+    15, 16, 17, 18, /* 104-111 (h-o) */
+    19, 20, 21, 22,
+    23, 24, 25, 26, /* 112-119 (p-w) */
+    27, 28, 29, 47,
+    49, 48, 53, 0 /* 120-127 (x-z,{,|,},~) - Adjusted */
 };
 
 /* Shift needed for these characters (US layout assumed) */
@@ -483,6 +482,13 @@ int send_key_sequence(const char *modifiers_str, const char *sequence) {
     }
   }
 
+  /* Final release if modifiers were used and it's not a holding operation */
+  if (modifiers != 0) {
+    report[0] = 0;
+    report[2] = 0;
+    write(fd, report, 8);
+  }
+
   close(fd);
   return 0;
 }
@@ -691,6 +697,11 @@ int process_keyboard(int argc, char *argv[]) {
           close(fd);
           return EXIT_FAILURE;
         }
+      }
+      /* Ensure FULL release including modifiers if not holding */
+      if (!hold_keys && modifiers != 0) {
+        memset(report, 0, KEYBOARD_REPORT_SIZE);
+        write(fd, report, KEYBOARD_REPORT_SIZE);
       }
     }
   } else if (modifiers != 0 && !release_keys) {
