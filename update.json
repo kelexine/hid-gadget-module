@@ -1,6 +1,6 @@
 {
-  "version": "v1.23.7",
-  "versionCode": 12307,
+  "version": "v1.23.8",
+  "versionCode": 12308,
   "zipUrl": "https://raw.githubusercontent.com/rexackermann/hid-gadget-module/main/hid-gadget-module.zip",
   "changelog": "https://github.com/kelexine/hid-gadget-module/blob/main/CHANGELOG.md"
 }

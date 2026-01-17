@@ -1,5 +1,5 @@
 #!/bin/sh
-# Universal hid-mouse wrapper
+# Universal hid-mouse wrapper with auto-recovery
 ARCH=$(uname -m)
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -18,4 +18,12 @@ if [ ! -f "$HID_GADGET" ]; then
     exit 1
 fi
 
-exec "$HID_GADGET" mouse "$@"
+if ! "$HID_GADGET" mouse "$@"; then
+    # Android specific recovery
+    if [ -f "/system/bin/setprop" ] && command -v su >/dev/null; then
+        echo "HID Mouse failed, attempting auto-fix..."
+        su -c "setprop sys.usb.config hid && hid-setup"
+        exec "$HID_GADGET" mouse "$@"
+    fi
+    exit 1
+fi

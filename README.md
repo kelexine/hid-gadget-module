@@ -1,9 +1,11 @@
-# USB HID Gadget Module v1.23.7
+# USB HID Gadget Module v1.23.8
 
 This Magisk module provides USB HID (Human Interface Device) gadget functionality for Android devices. It allows your device to act as a USB keyboard, mouse, or consumer control device.
 
 > [!IMPORTANT]
 > **Universal Static Binaries**: All binaries are compiled with `musl` and zero dependencies, ensuring compatibility across all Android versions (Bionic) and Linux distributions (glibc).
+> 
+> **Auto-Recovery**: As of v1.23.8, all wrappers include automatic failure detection and recovery using `hid-setup`.
 
 ## C-based TUI Keyboard
 The module features a powerful **dependency-free terminal keyboard** (`hid-tui`).

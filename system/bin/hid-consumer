@@ -1,15 +1,7 @@
 #!/system/bin/sh
-# hid-consumer - Wrapper for HID consumer control gadget functionality
-
-print_usage() {
-  echo "Usage: hid-consumer [action]"
-  echo "  actions: PLAY, PAUSE, MUTE, VOL+, VOL-, etc."
-}
-
-if [ $# -lt 1 ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
-  print_usage
-  exit 1
+# Magisk/KernelSU hid-consumer wrapper with auto-recovery
+if ! /system/bin/hid-gadget consumer "$@"; then
+    echo "HID Consumer failed, attempting auto-fix..."
+    su -c "setprop sys.usb.config hid && /system/bin/hid-setup"
+    exec /system/bin/hid-gadget consumer "$@"
 fi
-
-# Forward all arguments to hid-gadget
-exec "$(dirname "$0")/hid-gadget" consumer "$@"

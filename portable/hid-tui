@@ -1,5 +1,5 @@
 #!/bin/sh
-# Universal hid-tui (C-based) wrapper
+# Universal hid-tui (C-based) wrapper with auto-recovery
 ARCH=$(uname -m)
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -18,4 +18,12 @@ if [ ! -f "$HID_GADGET" ]; then
     exit 1
 fi
 
-exec "$HID_GADGET" tui "$@"
+if ! "$HID_GADGET" tui "$@"; then
+    # Android specific recovery
+    if [ -f "/system/bin/setprop" ] && command -v su >/dev/null; then
+        echo "HID TUI failed, attempting auto-fix..."
+        su -c "setprop sys.usb.config hid && hid-setup"
+        exec "$HID_GADGET" tui "$@"
+    fi
+    exit 1
+fi

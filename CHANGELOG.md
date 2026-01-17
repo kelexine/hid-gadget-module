@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.23.8 (2026-01-17)
+- **Auto-Recovery Logic**: Added automatic recovery to all wrapper scripts. If HID operation fails, the script will automatically attempt to run `hid-setup` and `setprop` via `su` before retrying.
+- **Robustness**: Improved reliability on Android systems with flaky USB gadget states.
+
 ## v1.23.7 (2026-01-17)
 - **C-based TUI Rewrite**: Rewrote the `hid-tui` interface in C using `termbox2`.
 - **Zero Dependencies**: Removed Python requirement for the terminal keyboard.
