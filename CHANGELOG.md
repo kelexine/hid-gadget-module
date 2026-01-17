@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.23.6 (2026-01-17)
+
+- **New TUI Keyboard Interface**: Added `hid-tui`, a laptop-style terminal keyboard with mouse support and sticky modifiers.
+- **Improved WIN Key Logic**: Toggles GUI modifier on first press, sends standalone WIN key on double-press.
+- **Enhanced Portability**: `hid-tui` is fully self-contained and available in the `portable/` directory.
+
 ## v1.23.5 (2026-01-17)
 
 - **Fixed Keyboard Modifier Logic**: Rewrote `parse_modifiers` to correctly handle single modifiers and composite strings like `CTRL-C`.

@@ -3,11 +3,15 @@
 ARCH=$(uname -m)
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
-    HID_GADGET="$BASE_DIR/bin/arm64/hid-gadget"
-else
-    HID_GADGET="$BASE_DIR/bin/x86_64/hid-gadget"
-fi
+case "$ARCH" in
+    aarch64|arm64) BIN="arm64" ;;
+    arm*) BIN="arm" ;;
+    x86_64|amd64) BIN="x86_64" ;;
+    i*86) BIN="x86" ;;
+    *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
+esac
+
+HID_GADGET="$BASE_DIR/bin/$BIN/hid-gadget"
 
 if [ ! -f "$HID_GADGET" ]; then
     echo "Error: hid-gadget binary not found for architecture $ARCH"

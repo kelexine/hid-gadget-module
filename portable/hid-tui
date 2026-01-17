@@ -1,0 +1,231 @@
+#!/usr/bin/env python3
+import curses
+import subprocess
+import os
+import sys
+
+# Define the keyboard layout
+# Format: (label, key_command, width_ratio)
+LAYOUT = [
+    # Function Row
+    [
+        ("ESC", "ESC", 1), ("F1", "F1", 1), ("F2", "F2", 1), ("F3", "F3", 1),
+        ("F4", "F4", 1), ("F5", "F5", 1), ("F6", "F6", 1), ("F7", "F7", 1),
+        ("F8", "F8", 1), ("F9", "F9", 1), ("F10", "F10", 1), ("F11", "F11", 1),
+        ("F12", "F12", 1), ("DEL", "DELETE", 1)
+    ],
+    # Number Row
+    [
+        ("`", "`", 1), ("1", "1", 1), ("2", "2", 1), ("3", "3", 1), ("4", "4", 1),
+        ("5", "5", 1), ("6", "6", 1), ("7", "7", 1), ("8", "8", 1), ("9", "9", 1),
+        ("0", "0", 1), ("-", "-", 1), ("=", "=", 1), ("BKSP", "BACKSPACE", 2)
+    ],
+    # QWERTY Row
+    [
+        ("TAB", "TAB", 1.5), ("Q", "q", 1), ("W", "w", 1), ("E", "e", 1), ("R", "r", 1),
+        ("T", "t", 1), ("Y", "y", 1), ("U", "u", 1), ("I", "i", 1), ("O", "o", 1),
+        ("P", "p", 1), ("[", "[", 1), ("]", "]", 1), ("\\", "\\", 1)
+    ],
+    # Home Row
+    [
+        ("CAPS", "CAPSLOCK", 1.75), ("A", "a", 1), ("S", "s", 1), ("D", "d", 1), ("F", "f", 1),
+        ("G", "g", 1), ("H", "h", 1), ("J", "j", 1), ("K", "k", 1), ("L", "l", 1),
+        (";", ";", 1), ("'", "'", 1), ("ENTER", "ENTER", 2.25)
+    ],
+    # Shift Row
+    [
+        ("SHIFT", "SHIFT", 2.25), ("Z", "z", 1), ("X", "x", 1), ("C", "c", 1), ("V", "v", 1),
+        ("B", "b", 1), ("N", "n", 1), ("M", "m", 1), (",", ",", 1), (".", ".", 1),
+        ("/", "/", 1), ("SHIFT", "SHIFT", 2.75)
+    ],
+    # Bottom Row
+    [
+        ("CTRL", "CTRL", 1.5), ("WIN", "WIN", 1.5), ("ALT", "ALT", 1.5),
+        ("SPACE", "SPACE", 5.0), ("ALT", "ALT", 1.5), ("CTRL", "CTRL", 1.5),
+        ("🠔", "LEFT", 1), ("🠖", "RIGHT", 1), ("🠕", "UP", 1), ("🠗", "DOWN", 1)
+    ]
+]
+
+# Modifier Keys
+MODIFIERS = {
+    "CTRL": False,
+    "SHIFT": False,
+    "ALT": False,
+    "WIN": False
+}
+
+WIN_PRESS_COUNT = 0
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+# Check if we are in a Magisk environment or portable
+HID_KEYBOARD = os.path.join(CURRENT_DIR, "hid-keyboard")
+if not os.path.exists(HID_KEYBOARD):
+    HID_KEYBOARD = "hid-keyboard" # Use path
+
+def run_hid_command(sequence, hold=False, release=False):
+    cmd = [HID_KEYBOARD]
+    if hold: cmd.append("--hold")
+    if release: cmd.append("--release")
+    
+    mods = []
+    if MODIFIERS["CTRL"]: mods.append("CTRL")
+    if MODIFIERS["SHIFT"]: mods.append("SHIFT")
+    if MODIFIERS["ALT"]: mods.append("ALT")
+    if MODIFIERS["WIN"]: mods.append("WIN")
+    
+    if mods: cmd.append("-".join(mods))
+    if sequence: cmd.append(sequence)
+    
+    try:
+        subprocess.run(cmd, check=False, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+    except Exception:
+        pass
+
+class Key:
+    def __init__(self, label, command, x, y, w, h):
+        self.label = label
+        self.command = command
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
+
+def draw_key(stdscr, key, highlighted=False):
+    is_active_mod = key.command in MODIFIERS and MODIFIERS[key.command]
+    
+    color = curses.color_pair(1)
+    if highlighted:
+        color = curses.color_pair(2)
+    elif is_active_mod:
+        color = curses.color_pair(3)
+        
+    # Draw box
+    for i in range(key.h):
+        try:
+            stdscr.addstr(key.y + i, key.x, " " * key.w, color)
+        except curses.error: pass
+    
+    # Draw label (centered)
+    label = key.label[:max(1, key.w-1)]
+    lx = key.x + (key.w - len(label)) // 2
+    ly = key.y + key.h // 2
+    try:
+        stdscr.addstr(ly, lx, label, color | curses.A_BOLD)
+    except curses.error: pass
+
+def handle_key_input(cmd):
+    global WIN_PRESS_COUNT
+    
+    if cmd in MODIFIERS:
+        if cmd == "WIN":
+            if WIN_PRESS_COUNT == 1:
+                # Second press: Send standalone WIN key
+                MODIFIERS["WIN"] = False
+                run_hid_command("GUI") 
+                WIN_PRESS_COUNT = 0
+            else:
+                # First press: Toggle GUI modifier
+                MODIFIERS["WIN"] = True
+                WIN_PRESS_COUNT = 1
+        else:
+            MODIFIERS[cmd] = not MODIFIERS[cmd]
+        return
+
+    # Regular key
+    run_hid_command(cmd)
+    
+    # After a regular key, if WIN was toggled as a modifier, turn it off
+    if WIN_PRESS_COUNT == 1:
+        MODIFIERS["WIN"] = False
+        WIN_PRESS_COUNT = 0
+
+def main(stdscr):
+    curses.curs_set(0)
+    curses.mousemask(curses.ALL_MOUSE_EVENTS | curses.REPORT_MOUSE_POSITION)
+    curses.start_color()
+    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK) # Default
+    curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_CYAN)  # Highlight
+    curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_YELLOW) # Active modifier
+    
+    stdscr.nodelay(True)
+    stdscr.keypad(True)
+    
+    keys = []
+    
+    def layout_keys():
+        keys.clear()
+        h, w = stdscr.getmaxyx()
+        # Normal laptop is ~14.5 units wide
+        # We need a bit of margin
+        scale = max(2, (w - 4) // 16)
+        
+        ky = 2
+        for row in LAYOUT:
+            kx = 2
+            for label, cmd, rw in row:
+                kw = int(rw * scale)
+                keys.append(Key(label, cmd, kx, ky, kw, 2))
+                kx += kw + 1
+            ky += 3
+            
+    layout_keys()
+    last_mouse_key = None
+    
+    while True:
+        stdscr.erase()
+        h, w = stdscr.getmaxyx()
+        
+        stdscr.addstr(0, 2, f"HID TUI v1.0 | ESC to quit | {w}x{h}", curses.A_DIM)
+        
+        # Draw keys
+        for key in keys:
+            draw_key(stdscr, key, highlighted=(key == last_mouse_key))
+        
+        stdscr.refresh()
+        
+        ch = stdscr.getch()
+        if ch == -1:
+            curses.napms(30)
+            continue
+            
+        if ch == 27: # ESC
+            stdscr.nodelay(True)
+            if stdscr.getch() == -1: break
+            continue
+        
+        if ch == curses.KEY_RESIZE:
+            layout_keys()
+            continue
+            
+        if ch == curses.KEY_MOUSE:
+            try:
+                _, mx, my, _, bstate = curses.getmouse()
+                if bstate & curses.BUTTON1_PRESSED:
+                    for key in keys:
+                        if key.x <= mx < key.x + key.w and key.y <= my < key.y + key.h:
+                            last_mouse_key = key
+                            handle_key_input(key.command)
+                            break
+                elif bstate & curses.BUTTON1_RELEASED:
+                    last_mouse_key = None
+            except: pass
+        else:
+            # Physical keyboard mapping
+            key_map = {
+                10: "ENTER", 13: "ENTER",
+                curses.KEY_BACKSPACE: "BACKSPACE", 127: "BACKSPACE",
+                curses.KEY_UP: "UP", curses.KEY_DOWN: "DOWN",
+                curses.KEY_LEFT: "LEFT", curses.KEY_RIGHT: "RIGHT",
+                curses.KEY_DC: "DELETE", curses.KEY_HOME: "HOME",
+                curses.KEY_END: "END", curses.KEY_PPAGE: "PAGEUP",
+                curses.KEY_NPAGE: "PAGEDOWN", 9: "TAB",
+            }
+            if ch in key_map:
+                handle_key_input(key_map[ch])
+            elif 32 <= ch <= 126:
+                handle_key_input(chr(ch))
+
+if __name__ == "__main__":
+    try:
+        curses.wrapper(main)
+    except KeyboardInterrupt:
+        pass

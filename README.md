@@ -1,4 +1,4 @@
-# HID Gadget Module for Magisk (v1.23.5)
+# HID Gadget Module for Magisk (v1.23.6)
 
 This Magisk module provides USB HID (Human Interface Device) gadget functionality for Android devices. It allows your device to act as a USB keyboard, mouse, or consumer control device.
 

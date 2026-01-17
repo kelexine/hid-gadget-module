@@ -4,6 +4,8 @@ CFLAGS = -Wall -Wextra -O2
 LDFLAGS = 
 TARGET_ARM64 = aarch64-linux-musl
 TARGET_X86_64 = x86_64-linux-musl
+TARGET_ARM = arm-linux-musleabi
+TARGET_X86 = x86-linux-musl
 
 TARGET = hid-gadget
 MOCK_TARGET = hid-gadget-mock
@@ -23,7 +25,13 @@ static-arm64: hid-gadget.c
 static-x86_64: hid-gadget.c
 	$(CROSS_CC) --target=$(TARGET_X86_64) -static $(CFLAGS) -o hid-gadget-x86_64-static $< $(LDFLAGS)
 
-static: static-arm64 static-x86_64
+static-arm: hid-gadget.c
+	$(CROSS_CC) --target=$(TARGET_ARM) -static $(CFLAGS) -o hid-gadget-arm-static $< $(LDFLAGS)
+
+static-x86: hid-gadget.c
+	$(CROSS_CC) --target=$(TARGET_X86) -static $(CFLAGS) -o hid-gadget-x86-static $< $(LDFLAGS)
+
+static: static-arm64 static-x86_64 static-arm static-x86
 
 # Mock static binary for testing parsing on PC
 mock-static: hid-gadget.c
