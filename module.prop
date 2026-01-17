@@ -1,7 +1,7 @@
 id=hid-gadget
 name=HID Gadget
-version=v1.23.6
-versionCode=12306
-author=@kelexine GitHub
-description=USB HID Gadget emulation for keyboard, mouse, and consumer control
-updateJson=https://raw.githubusercontent.com/kelexine/hid-gadget-module/main/update.json
+version=v1.23.7
+versionCode=12307
+author=rexackermann
+description=USB HID Gadget for emulating Keyboard, Mouse, and Consumer Control. Now includes a dependency-free C-based TUI keyboard!
+n=https://raw.githubusercontent.com/kelexine/hid-gadget-module/main/update.json

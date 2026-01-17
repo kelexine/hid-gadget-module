@@ -8,8 +8,9 @@
  * Dynamically finds the first three /dev/hidg* devices.
  */
 
+#include "tui.h"
 #include <ctype.h>
-#include <dirent.h> // For directory operations
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
@@ -397,14 +398,92 @@ uint8_t get_fn_key_usage(const char *key_name) {
   return 0;
 }
 
-/* Get consumer key usage code by name */
+// Get consumer key usage code by name */
 uint16_t get_consumer_key_usage(const char *key_name) {
   int i;
   for (i = 0; consumer_keys[i].name != NULL; i++) {
-    if (strcasecmp(key_name, consumer_keys[i].name) == 0) {
+    if (strcasecmp(key_name, consumer_keys[i].name) == 0)
       return consumer_keys[i].usage;
+  }
+  return 0;
+}
+
+/* Internal function to send a raw keyboard report */
+int send_keyboard_report(uint8_t modifiers, uint8_t key1, uint8_t key2,
+                         uint8_t key3, uint8_t key4, uint8_t key5,
+                         uint8_t key6) {
+  if (!g_keyboard_device)
+    return -1;
+
+  int fd = open(g_keyboard_device, O_RDWR);
+  if (fd < 0)
+    return -1;
+
+  uint8_t report[8] = {modifiers, 0, key1, key2, key3, key4, key5, key6};
+  int ret = write(fd, report, 8);
+  close(fd);
+  return (ret == 8) ? 0 : -1;
+}
+
+/* Reusable function to send a key sequence with optional modifiers */
+int send_key_sequence(const char *modifiers_str, const char *sequence) {
+  if (!g_keyboard_device)
+    return -1;
+
+  int fd = open(g_keyboard_device, O_RDWR);
+  if (fd < 0)
+    return -1;
+
+  uint8_t modifiers = 0;
+  if (modifiers_str) {
+    modifiers = parse_modifiers(modifiers_str, NULL);
+  }
+
+  uint8_t report[8] = {0};
+  report[0] = modifiers;
+
+  if (sequence == NULL || strlen(sequence) == 0) {
+    /* Just send modifiers */
+    write(fd, report, 8);
+    close(fd);
+    return 0;
+  }
+
+  /* Check for function key */
+  uint8_t fn_usage = get_fn_key_usage(sequence);
+  if (fn_usage != 0) {
+    report[2] = fn_usage;
+    write(fd, report, 8);
+    /* Release if it's a one-shot */
+    report[2] = 0;
+    write(fd, report, 8);
+  } else {
+    /* Regular text */
+    for (size_t i = 0; i < strlen(sequence); i++) {
+      char c = sequence[i];
+      uint8_t usage = 0;
+      uint8_t current_mods = modifiers;
+
+      if ((unsigned char)c < 128)
+        usage = usage_table[(unsigned char)c];
+
+      if (usage != 0) {
+        if (strchr(shift_chars, c))
+          current_mods |= MOD_SHIFT_LEFT;
+
+        report[0] = current_mods;
+        report[2] = usage;
+        write(fd, report, 8);
+
+        /* Release */
+        report[0] = modifiers;
+        report[2] = 0;
+        write(fd, report, 8);
+      }
     }
   }
+
+  close(fd);
   return 0;
 }
 
@@ -1012,6 +1091,12 @@ int main(int argc, char *argv[]) {
       return EXIT_FAILURE;
     }
     result = process_consumer(argc - 1, &argv[1]);
+  } else if (strcmp(command, "tui") == 0) {
+    if (!g_keyboard_device) {
+      fprintf(stderr, "Error: No keyboard device available for TUI.\n");
+      return EXIT_FAILURE;
+    }
+    result = run_tui();
   } else {
     fprintf(stderr, "Error: Unknown command '%s'\n", command);
     print_usage(argv[0]); // Will exit

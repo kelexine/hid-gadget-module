@@ -1,16 +1,28 @@
-# HID Gadget Module for Magisk (v1.23.6)
+# USB HID Gadget Module v1.23.7
 
 This Magisk module provides USB HID (Human Interface Device) gadget functionality for Android devices. It allows your device to act as a USB keyboard, mouse, or consumer control device.
 
 > [!IMPORTANT]
-> This version (v1.23.3) features **Universal Static Binaries** compiled with `musl`, ensuring compatibility across all Android versions (Bionic) and Linux distributions (glibc) without any external dependencies.
+> **Universal Static Binaries**: All binaries are compiled with `musl` and zero dependencies, ensuring compatibility across all Android versions (Bionic) and Linux distributions (glibc).
 
-## Key Features
+## C-based TUI Keyboard
+The module features a powerful **dependency-free terminal keyboard** (`hid-tui`).
 
-- **Robust Modifier Parsing**: Correctly handles single modifiers (CTRL, ALT, etc.) and composite strings like `CTRL-C`.
-- **Universal Static Linking**: Compiled with Zig CC and `musl` for zero-dependency execution.
-- **Standalone Portable Mode**: Test and run HID logic on any system without installing the module.
-- **Architecture Aware**: Automatic selection of ARM64, ARM, x86_64, or x86 binaries.
+To launch it:
+```bash
+hid-tui
+```
+or in portable mode:
+```bash
+./portable/hid-tui
+```
+
+**Features:**
+- Laptop-style 60-75% layout.
+- Mouse support (clickable keys).
+- Physical keyboard passthrough.
+- Sticky modifiers (CTRL, ALT, SHIFT).
+- Smart WIN key logic (Double-press for standalone WIN).
 
 ---
 
@@ -35,7 +47,7 @@ This Magisk module provides USB HID (Human Interface Device) gadget functionalit
 
 ## Build Instructions (Developers)
 
-The module uses **Zig CC** for cross-compilation to provide statically linked `musl` binaries. This is the recommended way to build to ensure the binary runs on the Android environment.
+The module uses **Zig CC** for cross-compilation.
 
 ### Prerequisites
 - [Zig](https://ziglang.org/download/) (v0.11.0 or newer)
@@ -47,20 +59,9 @@ The module uses **Zig CC** for cross-compilation to provide statically linked `m
    ```bash
    make static
    ```
-   *This uses `zig cc --target=aarch64-linux-musl -static` to target different architectures.*
-
 2. **Repack Magisk ZIP**:
    ```bash
-   # Build the ARM64 production binary
-   zig cc --target=aarch64-linux-gnu -O2 -o blobs/arm64/hid-gadget hid-gadget.c
-   # ... repeat for other architectures into blobs/ ...
-   # Pack the ZIP (ensure system/ and META-INF/ are included)
    zip -r hid-gadget-module.zip . -x ".*" "build/*" "portable/*"
-   ```
-
-3. **Cleanup**:
-   ```bash
-   make clean
    ```
 
 ---
@@ -76,6 +77,7 @@ Run the architecture-aware scripts directly from the `portable/` directory:
 ./portable/hid-keyboard CTRL-C
 ./portable/hid-mouse move 10 -5
 ./portable/hid-consumer VOL+
+./portable/hid-tui
 ```
 
 ---
