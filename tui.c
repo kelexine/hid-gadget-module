@@ -12,108 +12,120 @@ extern int send_keyboard_report(uint8_t modifiers, uint8_t key1, uint8_t key2,
                                 uint8_t key6);
 extern int send_key_sequence(const char *modifiers_str, const char *sequence);
 extern uint8_t parse_modifiers(const char *mod_str, const char **remainder);
-// More may be needed if tui.c calls them directly.
-// For now, we'll try to keep tui.c self-contained in calling back through
-// existing logic if possible, or we'll expose what we need in a header.
 
-// Modifier bits (re-defining or including from a shared header would be better)
+// Modifier bits
 #define MOD_CTRL_LEFT (1 << 0)
 #define MOD_SHIFT_LEFT (1 << 1)
 #define MOD_ALT_LEFT (1 << 2)
 #define MOD_GUI_LEFT (1 << 3)
 
 typedef struct {
-  char *label;
-  char *cmd;
-  float width;
+  const char *label;
+  const char *cmd;
+  float width; // Width in units (u)
 } Key;
 
-static Key layout[][20] = {{{"ESC", "ESC", 1},
-                            {"F1", "F1", 1},
-                            {"F2", "F2", 1},
-                            {"F3", "F3", 1},
-                            {"F4", "F4", 1},
-                            {"F5", "F5", 1},
-                            {"F6", "F6", 1},
-                            {"F7", "F7", 1},
-                            {"F8", "F8", 1},
-                            {"F9", "F9", 1},
-                            {"F10", "F10", 1},
-                            {"F11", "F11", 1},
-                            {"F12", "F12", 1},
-                            {"HOME", "HOME", 1},
-                            {"END", "END", 1},
-                            {"DEL", "DELETE", 1},
-                            {NULL, NULL, 0}},
-                           {{"`", "`", 1},
-                            {"1", "1", 1},
-                            {"2", "2", 1},
-                            {"3", "3", 1},
-                            {"4", "4", 1},
-                            {"5", "5", 1},
-                            {"6", "6", 1},
-                            {"7", "7", 1},
-                            {"8", "8", 1},
-                            {"9", "9", 1},
-                            {"0", "0", 1},
-                            {"-", "-", 1},
-                            {"=", "=", 1},
-                            {"BKSP", "BACKSPACE", 2},
-                            {NULL, NULL, 0}},
-                           {{"TAB", "TAB", 1.5},
-                            {"Q", "q", 1},
-                            {"W", "w", 1},
-                            {"E", "e", 1},
-                            {"R", "r", 1},
-                            {"T", "t", 1},
-                            {"Y", "y", 1},
-                            {"U", "u", 1},
-                            {"I", "i", 1},
-                            {"O", "o", 1},
-                            {"P", "p", 1},
-                            {"[", "[", 1},
-                            {"]", "]", 1},
-                            {"\\", "\\", 1},
-                            {NULL, NULL, 0}},
-                           {{"CAPS", "CAPSLOCK", 1.75},
-                            {"A", "a", 1},
-                            {"S", "s", 1},
-                            {"D", "d", 1},
-                            {"F", "f", 1},
-                            {"G", "g", 1},
-                            {"H", "h", 1},
-                            {"J", "j", 1},
-                            {"K", "k", 1},
-                            {"L", "l", 1},
-                            {";", ";", 1},
-                            {"'", "'", 1},
-                            {"ENTER", "ENTER", 2.25},
-                            {NULL, NULL, 0}},
-                           {{"SHIFT", "SHIFT", 2.25},
-                            {"Z", "z", 1},
-                            {"X", "x", 1},
-                            {"C", "c", 1},
-                            {"V", "v", 1},
-                            {"B", "b", 1},
-                            {"N", "n", 1},
-                            {"M", "m", 1},
-                            {",", ",", 1},
-                            {".", ".", 1},
-                            {"/", "/", 1},
-                            {"SHIFT", "SHIFT", 2.75},
-                            {NULL, NULL, 0}},
-                           {{"CTRL", "CTRL", 1.5},
-                            {"WIN", "WIN", 1.5},
-                            {"ALT", "ALT", 1.5},
-                            {"SPACE", "SPACE", 5.0},
-                            {"ALT", "ALT", 1.5},
-                            {"CTRL", "CTRL", 1.5},
-                            {"\u2190", "LEFT", 1},
-                            {"\u2192", "RIGHT", 1},
-                            {"\u2191", "UP", 1},
-                            {"\u2193", "DOWN", 1},
-                            {NULL, NULL, 0}},
-                           {{NULL, NULL, 0}}};
+// Realistic Staggered Layout (Mechanical Keyboard Style)
+static Key layout[6][20] = {
+    // Row 0: Function Keys (0 offset)
+    {{"ESC", "ESC", 1},
+     {"F1", "F1", 1},
+     {"F2", "F2", 1},
+     {"F3", "F3", 1},
+     {"F4", "F4", 1},
+     {"F5", "F5", 1},
+     {"F6", "F6", 1},
+     {"F7", "F7", 1},
+     {"F8", "F8", 1},
+     {"F9", "F9", 1},
+     {"F10", "F10", 1},
+     {"F11", "F11", 1},
+     {"F12", "F12", 1},
+     {"HOME", "HOME", 1},
+     {"END", "END", 1},
+     {"DEL", "DELETE", 1},
+     {NULL, NULL, 0}},
+
+    // Row 1: Numbers (0 offset)
+    {{"`", "`", 1},
+     {"1", "1", 1},
+     {"2", "2", 1},
+     {"3", "3", 1},
+     {"4", "4", 1},
+     {"5", "5", 1},
+     {"6", "6", 1},
+     {"7", "7", 1},
+     {"8", "8", 1},
+     {"9", "9", 1},
+     {"0", "0", 1},
+     {"-", "-", 1},
+     {"=", "=", 1},
+     {"BKSP", "BACKSPACE", 2},
+     {NULL, NULL, 0}},
+
+    // Row 2: QWERTY (1.5u Tab)
+    {{"TAB", "TAB", 1.5},
+     {"Q", "q", 1},
+     {"W", "w", 1},
+     {"E", "e", 1},
+     {"R", "r", 1},
+     {"T", "t", 1},
+     {"Y", "y", 1},
+     {"U", "u", 1},
+     {"I", "i", 1},
+     {"O", "o", 1},
+     {"P", "p", 1},
+     {"[", "[", 1},
+     {"]", "]", 1},
+     {"\\", "\\", 1.5},
+     {NULL, NULL, 0}},
+
+    // Row 3: ASDF (1.75u Caps, 2.25u Enter)
+    {{"CAPS", "CAPSLOCK", 1.75},
+     {"A", "a", 1},
+     {"S", "s", 1},
+     {"D", "d", 1},
+     {"F", "f", 1},
+     {"G", "g", 1},
+     {"H", "h", 1},
+     {"J", "j", 1},
+     {"K", "k", 1},
+     {"L", "l", 1},
+     {";", ";", 1},
+     {"'", "'", 1},
+     {"ENTER", "ENTER", 2.25},
+     {NULL, NULL, 0}},
+
+    // Row 4: ZXCV (2.25u ShiftL, 2.75u ShiftR)
+    {{"SHIFT", "SHIFT", 2.25},
+     {"Z", "z", 1},
+     {"X", "x", 1},
+     {"C", "c", 1},
+     {"V", "v", 1},
+     {"B", "b", 1},
+     {"N", "n", 1},
+     {"M", "m", 1},
+     {",", ",", 1},
+     {".", ".", 1},
+     {"/", "/", 1},
+     {"SHIFT", "SHIFT", 2.75},
+     {"\u2191", "UP", 1},
+     {NULL, NULL, 0}},
+
+    // Row 5: Modifiers (1.25u/1.5u, 6.25u Space, T-Arrows)
+    {{"CTRL", "CTRL", 1.5},
+     {"WIN", "WIN", 1.25},
+     {"ALT", "ALT", 1.25},
+     {"SPACE", "SPACE", 6.25},
+     {"ALT", "ALT", 1.25},
+     {"CTRL", "CTRL", 1.5},
+     {"\u2190", "LEFT", 1},
+     {"\u2193", "DOWN", 1},
+     {"\u2192", "RIGHT", 1},
+     {NULL, NULL, 0}}};
+
+// Row Offsets in units (to create staggering)
+static float row_offsets[6] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 
 static uint8_t active_mods = 0;
 static int win_press_count = 0;
@@ -135,33 +147,58 @@ void draw_text(int x, int y, uintattr_t fg, uintattr_t bg, const char *str) {
   }
 }
 
+// Draw a box with Unicode characters
+void draw_box(int x, int y, int w, int h, uintattr_t fg, uintattr_t bg) {
+  for (int iy = 0; iy < h; iy++) {
+    for (int ix = 0; ix < w; ix++) {
+      uint32_t ch = ' ';
+      if (iy == 0 && ix == 0)
+        ch = 0x250C; // ┌
+      else if (iy == 0 && ix == w - 1)
+        ch = 0x2510; // ┐
+      else if (iy == h - 1 && ix == 0)
+        ch = 0x2514; // └
+      else if (iy == h - 1 && ix == w - 1)
+        ch = 0x2518; // ┘
+      else if (iy == 0 || iy == h - 1)
+        ch = 0x2500; // ─
+      else if (ix == 0 || ix == w - 1)
+        ch = 0x2502; // │
+      tb_set_cell(x + ix, y + iy, ch, fg, bg);
+    }
+  }
+}
+
 void render_keyboard() {
   tb_clear();
   int term_w = tb_width();
   int term_h = tb_height();
 
   draw_text(2, 0, TB_WHITE | TB_BOLD, TB_DEFAULT,
-            "HID C-TUI v1.24.0 | CTRL+ALT+Q to quit");
+            "HID INDUSTRIAL v1.25.0 | CTRL+ALT+Q to quit");
 
-  int scale = (term_w - 4) / 16;
-  if (scale < 2)
-    scale = 2;
+  // Determine scaling. 1u = scale pixels.
+  // Max units in a row is approx 15-16.
+  int scale = (term_w - 6) / 16;
+  if (scale < 3)
+    scale = 3;
 
   render_key_count = 0;
-  // Calculate vertical start to align to bottom
-  int total_rows = 0;
-  while (layout[total_rows][0].label != NULL)
-    total_rows++;
-  int ky = term_h - (total_rows * 3) - 1;
-  if (ky < 2)
-    ky = 2;
+  int total_rows = 6;
+  int ky_start = term_h - (total_rows * 3) - 1;
+  if (ky_start < 2)
+    ky_start = 2;
 
-  for (int r = 0; layout[r][0].label != NULL; r++) {
-    int kx = 2;
+  for (int r = 0; r < total_rows; r++) {
+    int ky = ky_start + (r * 3);
+    int kx = 2 + (int)(row_offsets[r] * scale);
+
     for (int k = 0; layout[r][k].label != NULL; k++) {
       Key *key = &layout[r][k];
       int kw = (int)(key->width * scale);
-      int kh = 2;
+      if (kw < 2)
+        kw = 2;
+      int kh = 3;
 
       RenderKey *rk = &render_keys[render_key_count++];
       strncpy(rk->label, key->label, sizeof(rk->label));
@@ -171,32 +208,41 @@ void render_keyboard() {
       rk->w = kw;
       rk->h = kh;
 
-      uintattr_t bg = TB_WHITE;
-      uintattr_t fg = TB_BLACK;
+      uintattr_t bg = TB_DEFAULT;
+      uintattr_t fg = TB_WHITE;
 
-      // Check if it's an active modifier
-      if (strcmp(rk->cmd, "CTRL") == 0 && (active_mods & MOD_CTRL_LEFT))
+      if (strcmp(rk->cmd, "CTRL") == 0 && (active_mods & MOD_CTRL_LEFT)) {
         bg = TB_YELLOW;
-      if (strcmp(rk->cmd, "SHIFT") == 0 && (active_mods & MOD_SHIFT_LEFT))
+        fg = TB_BLACK;
+      }
+      if (strcmp(rk->cmd, "SHIFT") == 0 && (active_mods & MOD_SHIFT_LEFT)) {
         bg = TB_YELLOW;
-      if (strcmp(rk->cmd, "ALT") == 0 && (active_mods & MOD_ALT_LEFT))
+        fg = TB_BLACK;
+      }
+      if (strcmp(rk->cmd, "ALT") == 0 && (active_mods & MOD_ALT_LEFT)) {
         bg = TB_YELLOW;
-      if (strcmp(rk->cmd, "WIN") == 0 && (active_mods & MOD_GUI_LEFT))
+        fg = TB_BLACK;
+      }
+      if (strcmp(rk->cmd, "WIN") == 0 && (active_mods & MOD_GUI_LEFT)) {
         bg = TB_YELLOW;
-
-      for (int iy = 0; iy < kh; iy++) {
-        for (int ix = 0; ix < kw; ix++) {
-          tb_set_cell(kx + ix, ky + iy, ' ', fg, bg);
-        }
+        fg = TB_BLACK;
       }
 
-      int lx = kx + (kw - strlen(rk->label)) / 2;
-      int ly = ky + kh / 2;
+      // Special coloring for big keys
+      if (key->width > 1.25 && bg == TB_DEFAULT) {
+        bg = TB_BLUE;
+        fg = TB_WHITE;
+      }
+
+      draw_box(kx, ky, kw, kh, fg, bg);
+
+      int label_len = strlen(rk->label);
+      int lx = kx + (kw - label_len) / 2;
+      int ly = ky + 1;
       draw_text(lx, ly, fg | TB_BOLD, bg, rk->label);
 
-      kx += kw + 1;
+      kx += kw + 0; // No spacing between boxes since borders touch
     }
-    ky += 3;
   }
   tb_present();
 }
@@ -238,11 +284,10 @@ void handle_input(const char *cmd) {
     strcat(mods_str, "WIN-");
 
   if (strlen(mods_str) > 0)
-    mods_str[strlen(mods_str) - 1] = '\0'; // Remove trailing dash
+    mods_str[strlen(mods_str) - 1] = '\0';
 
   send_key_sequence(mods_str[0] ? mods_str : NULL, cmd);
 
-  // Auto-release WIN if it was a single press modifier
   if (win_press_count == 1) {
     active_mods &= ~MOD_GUI_LEFT;
     win_press_count = 0;
@@ -275,8 +320,6 @@ int run_tui(void) {
         handle_input("ESC");
         continue;
       }
-
-      // Physical keyboard mapping
       if (ev.key == TB_KEY_ENTER)
         handle_input("ENTER");
       else if (ev.key == TB_KEY_BACKSPACE || ev.key == TB_KEY_BACKSPACE2)
@@ -313,7 +356,7 @@ int run_tui(void) {
         }
       }
     } else if (ev.type == TB_EVENT_RESIZE) {
-      // Screen handles resize in the next loop
+      // Handled in next loop
     }
   }
 
