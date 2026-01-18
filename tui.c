@@ -275,40 +275,54 @@ void render_keyboard() {
 
   // Header Title
   draw_text(2, 0, TB_WHITE | TB_BOLD, TB_DEFAULT,
-            "HID INDUSTRIAL v1.35.3 | Tap EXIT or Ctrl+C to quit");
+            "HID INDUSTRIAL v1.35.6 | Tap EXIT or Ctrl+C to quit");
 
   // --- EXIT BUTTON ---
   draw_box(l.btn_x, l.btn_y, l.btn_w, l.btn_h, TB_WHITE | TB_BOLD, TB_RED);
   draw_text(l.btn_x + 3, l.btn_y + 1, TB_WHITE | TB_BOLD, TB_RED, "[ EXIT ]");
 
   // --- MEDIA KEYS ---
-  struct {
+  struct MediaKey {
     const char *label;
     const char *cmd;
-  } media1[] = {{"NEXT", "NEXT"},  {"PREV", "PREVIOUS"}, {"PLAY", "PLAY"},
-                {"STOP", "STOP"},  {"REC", "RECORD"},    {"FWD", "FORWARD"},
-                {"RWD", "REWIND"}, {NULL, NULL}};
-  struct {
-    const char *label;
-    const char *cmd;
-  } media2[] = {{"V+", "VOL+"},         {"V-", "VOL-"},
-                {"MUTE", "MUTE"},       {"EJ", "EJECT"},
-                {"BR+", "BRIGHTNESS+"}, {"BR-", "BRIGHTNESS-"},
-                {"PAUS", "PAUSE"},      {NULL, NULL}};
+    uintattr_t fg;
+  };
 
-  int mw = 10;
-  int mx = (l.term_w - 7 * mw) / 2;
+  struct MediaKey media1[] = {{"\u23EA", "REWIND", TB_CYAN},   // ⏪
+                              {"\u23EE", "PREVIOUS", TB_CYAN}, // ⏮
+                              {"\u25B6", "PLAY", TB_GREEN},    // ▶ (Play)
+                              {"\u23ED", "NEXT", TB_CYAN},     // ⏭
+                              {"\u23E9", "FORWARD", TB_CYAN},  // ⏩
+                              {"\U0001F509", "VOL-", TB_BLUE}, // 🔉
+                              {"\U0001F50A", "VOL+", TB_BLUE}, // 🔊
+                              {"\U0001F507", "MUTE", TB_RED | TB_BOLD}, // 🔇
+                              {NULL, NULL, 0}};
+
+  struct MediaKey media2[] = {
+      {"\u23FA", "RECORD", TB_RED},                   // ⏺
+      {"\u23F8", "PAUSE", TB_YELLOW},                 // ⏸
+      {"\u23F9", "STOP", TB_RED},                     // ⏹
+      {"\u23CF", "EJECT", TB_MAGENTA},                // ⏏
+      {"\U0001F505", "BRIGHTNESS-", TB_YELLOW},       // 🔅
+      {"\u2600", "BRIGHTNESS+", TB_YELLOW | TB_BOLD}, // ☀
+      {NULL, NULL, 0},
+      {NULL, NULL, 0},
+      {NULL, NULL, 0}}; // Padding to match loop
+
+  int mw = 8;
+  int mx = (l.term_w - 8 * mw) / 2;
   if (mx < 0)
     mx = 0;
 
   for (int i = 0; media1[i].label; i++) {
-    draw_box(mx + i * mw, l.media_y, mw - 1, 3, TB_WHITE, TB_DEFAULT);
-    draw_text(mx + i * mw + 1, l.media_y + 1, TB_GREEN, TB_DEFAULT,
+    draw_box(mx + i * mw, l.media_y, mw - 1, 3, media1[i].fg, TB_DEFAULT);
+    // Center the icon (roughly)
+    draw_text(mx + i * mw + 2, l.media_y + 1, media1[i].fg, TB_DEFAULT,
               media1[i].label);
   }
   for (int i = 0; media2[i].label; i++) {
-    draw_box(mx + i * mw, l.media_y + 3, mw - 1, 3, TB_WHITE, TB_DEFAULT);
-    draw_text(mx + i * mw + 1, l.media_y + 4, TB_CYAN, TB_DEFAULT,
+    draw_box(mx + i * mw, l.media_y + 3, mw - 1, 3, media2[i].fg, TB_DEFAULT);
+    draw_text(mx + i * mw + 2, l.media_y + 4, media2[i].fg, TB_DEFAULT,
               media2[i].label);
   }
 
@@ -605,24 +619,24 @@ int run_tui(void) {
         struct {
           const char *label;
           const char *cmd;
-        } m1[] = {{"NEXT", "NEXT"},  {"PREV", "PREVIOUS"}, {"PLAY", "PLAY"},
-                  {"STOP", "STOP"},  {"REC", "RECORD"},    {"FWD", "FORWARD"},
-                  {"RWD", "REWIND"}, {NULL, NULL}};
+        } m1[] = {{"RWD", "REWIND"}, {"PREV", "PREVIOUS"}, {"PLAY", "PLAY"},
+                  {"NEXT", "NEXT"},  {"FWD", "FORWARD"},   {"V-", "VOL-"},
+                  {"V+", "VOL+"},    {"MUTE", "MUTE"},     {NULL, NULL}};
         struct {
           const char *label;
           const char *cmd;
-        } m2[] = {{"V+", "VOL+"},         {"V-", "VOL-"},
-                  {"MUTE", "MUTE"},       {"EJ", "EJECT"},
-                  {"BR+", "BRIGHTNESS+"}, {"BR-", "BRIGHTNESS-"},
-                  {"PAUS", "PAUSE"},      {NULL, NULL}};
-        int mw = 10;
-        int mx_m = (l.term_w - 7 * mw) / 2;
+        } m2[] = {
+            {"REC", "RECORD"}, {"PAUS", "PAUSE"},      {"STOP", "STOP"},
+            {"EJ", "EJECT"},   {"BR-", "BRIGHTNESS-"}, {"BR+", "BRIGHTNESS+"},
+            {NULL, NULL}};
+        int mw = 8;
+        int mx_m = (l.term_w - 8 * mw) / 2;
         if (mx_m < 0)
           mx_m = 0;
 
         if (ev.y >= l.media_y && ev.y < l.media_y + 3) {
           int idx = (ev.x - mx_m) / mw;
-          if (idx >= 0 && idx < 7)
+          if (idx >= 0 && idx < 8)
             send_key_sequence(NULL, m1[idx].cmd);
         } else if (ev.y >= l.media_y + 3 && ev.y < l.media_y + 6) {
           int idx = (ev.x - mx_m) / mw;

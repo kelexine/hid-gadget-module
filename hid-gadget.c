@@ -288,7 +288,7 @@ void print_usage(const char *prog_name) {
     find_hidg_devices();
   }
 
-  fprintf(stderr, "HID Gadget Controller v1.35.3\n"); // Script will update this
+  fprintf(stderr, "HID Gadget Controller v1.35.6\n"); // Script will update this
   fprintf(stderr, "Usage: %s [keyboard|mouse|consumer] [options]\n", prog_name);
   fprintf(stderr, "\nKeyboard mode (uses %s):\n", g_keyboard_device);
   fprintf(stderr, "  %s keyboard [--hold] [--release] [modifiers] sequence\n",

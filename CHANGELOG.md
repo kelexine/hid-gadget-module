@@ -1,5 +1,17 @@
 # Changelog
 
+## [v1.35.6] - 2026-01-18
+### Visual Overhaul
+- **Icons & Colors**: Replaced text labels with proper Unicode icons (⏪, ▶, 🔊, etc.) and added color coding (Cyan for Nav, Blue for Vol, Red for Mute/Stop) for a professional dashboard look.
+
+## [v1.35.5] - 2026-01-18
+### UI Improvements
+- **Beautiful Media Deck**: Rearranged media keys for better usability. Seek/Nav on top-left, Transport on mid-left, Forward/Next on top-right, and Volume/Brightness on right.
+
+## [v1.35.4] - 2026-01-18
+### Critical Fix
+- **Media Keys**: Replaced `consumer-desc.bin` with a standard HID descriptor supporting 1024 usages. Resolved issue where media keys were triggering System Power causing shutdowns.
+
 ## [v1.35.3] - 2026-01-18
 ### Added
 - **Automated CI/CD**: Added GitHub Actions workflow (`release.yml`) for zero-touch releases.
