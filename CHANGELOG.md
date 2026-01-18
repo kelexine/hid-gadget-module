@@ -1,6 +1,12 @@
 # Changelog
 
-## v1.23.8 (2026-01-17)
+## [v1.25.1] - 2026-01-18
+### Fixed
+- **TUI Exit**: Fixed issue where `Ctrl+Alt+Q` was not being captured correctly in some terminals.
+- **Input Mode**: Enabled `TB_INPUT_ALT` for reliable modifier detection.
+- **Fail-safe**: Added `Ctrl+C` and `Ctrl+Q` (with Alt) as fallback exit sequences.
+
+## [v1.25.0] - 2026-01-18
 - **Auto-Recovery Logic**: Added automatic recovery to all wrapper scripts. If HID operation fails, the script will automatically attempt to run `hid-setup` and `setprop` via `su` before retrying.
 - **Robustness**: Improved reliability on Android systems with flaky USB gadget states.
 

@@ -174,8 +174,17 @@ void render_keyboard() {
   int term_w = tb_width();
   int term_h = tb_height();
 
+  // Header Title
   draw_text(2, 0, TB_WHITE | TB_BOLD, TB_DEFAULT,
-            "HID INDUSTRIAL v1.25.0 | CTRL+ALT+Q to quit");
+            "HID INDUSTRIAL v1.26.0 | Tap EXIT or Ctrl+C to quit");
+
+  // --- EXIT BUTTON ROW ---
+  int btn_w = 14;
+  int btn_x = (term_w - btn_w) / 2;
+  int btn_y = 1; // Row 1
+  draw_box(btn_x, btn_y, btn_w, 3, TB_WHITE | TB_BOLD, TB_RED);
+  draw_text(btn_x + 3, btn_y + 1, TB_WHITE | TB_BOLD, TB_RED, "[ EXIT ]");
+  // -----------------------
 
   // Determine scaling. 1u = scale pixels.
   // Max units in a row is approx 15-16.
@@ -185,9 +194,10 @@ void render_keyboard() {
 
   render_key_count = 0;
   int total_rows = 6;
+  // Shift down by 4 rows to make room for Exit Button
   int ky_start = term_h - (total_rows * 3) - 1;
-  if (ky_start < 2)
-    ky_start = 2;
+  if (ky_start < 5)
+    ky_start = 5;
 
   for (int r = 0; r < total_rows; r++) {
     int ky = ky_start + (r * 3);
@@ -301,7 +311,7 @@ int run_tui(void) {
     return EXIT_FAILURE;
   }
 
-  tb_set_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE);
+  tb_set_input_mode(TB_INPUT_ESC | TB_INPUT_MOUSE | TB_INPUT_ALT);
 
   while (1) {
     render_keyboard();
@@ -312,8 +322,8 @@ int run_tui(void) {
       break;
 
     if (ev.type == TB_EVENT_KEY) {
-      if ((ev.mod & TB_MOD_CTRL) && (ev.mod & TB_MOD_ALT) &&
-          (ev.ch == 'q' || ev.ch == 'Q'))
+      // Exit sequences
+      if (ev.key == TB_KEY_CTRL_C)
         break;
 
       if (ev.key == TB_KEY_ESC) {
@@ -346,6 +356,17 @@ int run_tui(void) {
       }
     } else if (ev.type == TB_EVENT_MOUSE) {
       if (ev.key == TB_KEY_MOUSE_LEFT) {
+        // CHECK EXIT BUTTON CLICK
+        int term_w = tb_width();
+        int btn_w = 14;
+        int btn_x = (term_w - btn_w) / 2;
+        int btn_y = 1;
+        // Button height is 3 (y=1 to y=3)
+        if (ev.x >= btn_x && ev.x < btn_x + btn_w && ev.y >= btn_y &&
+            ev.y < btn_y + 3) {
+          break; // EXIT
+        }
+
         for (int i = 0; i < render_key_count; i++) {
           RenderKey *rk = &render_keys[i];
           if (ev.x >= rk->x && ev.x < rk->x + rk->w && ev.y >= rk->y &&
