@@ -1,7 +1,7 @@
 id=hid-gadget
 name=HID Gadget
-version=v1.26.0
-versionCode=12600
+version=v1.35.3
+versionCode=13503
 author=rexackermann
 description=USB HID Gadget with dependency-free C-based TUI keyboard and auto-recovery.
 updateJson=https://raw.githubusercontent.com/rexackermann/hid-gadget-module/main/update.json

@@ -288,6 +288,7 @@ void print_usage(const char *prog_name) {
     find_hidg_devices();
   }
 
+  fprintf(stderr, "HID Gadget Controller v1.35.3\n"); // Script will update this
   fprintf(stderr, "Usage: %s [keyboard|mouse|consumer] [options]\n", prog_name);
   fprintf(stderr, "\nKeyboard mode (uses %s):\n", g_keyboard_device);
   fprintf(stderr, "  %s keyboard [--hold] [--release] [modifiers] sequence\n",
@@ -424,10 +425,36 @@ int send_keyboard_report(uint8_t modifiers, uint8_t key1, uint8_t key2,
   return (ret == 8) ? 0 : -1;
 }
 
+/* Send a single consumer report (press then release) */
+int send_consumer_key(const char *action) {
+  if (!g_consumer_device)
+    return -1;
+  uint16_t usage = get_consumer_key_usage(action);
+  if (usage == 0)
+    return -1;
+
+  int fd = open(g_consumer_device, O_RDWR);
+  if (fd < 0)
+    return -1;
+
+  uint8_t report[2] = {usage & 0xFF, (usage >> 8) & 0xFF};
+  write(fd, report, 2);
+  usleep(50000); // 50ms tap
+  memset(report, 0, 2);
+  write(fd, report, 2);
+  close(fd);
+  return 0;
+}
+
 /* Reusable function to send a key sequence with optional modifiers */
 int send_key_sequence(const char *modifiers_str, const char *sequence) {
   if (!g_keyboard_device)
     return -1;
+
+  // Check if the entire sequence is a consumer key first
+  if (sequence && get_consumer_key_usage(sequence) != 0) {
+    return send_consumer_key(sequence);
+  }
 
   int fd = open(g_keyboard_device, O_RDWR);
   if (fd < 0)
@@ -544,8 +571,8 @@ int process_keyboard(int argc, char *argv[]) {
     default:
       fprintf(stderr, "Invalid option in keyboard command.\n");
       // Consider printing keyboard-specific usage here
-      // print_usage(argv[0]); // Might need adjustment if argv[0] isn't program
-      // name
+      // print_usage(argv[0]); // Might need adjustment if argv[0] isn't
+      // program name
       return EXIT_FAILURE;
     }
   }
@@ -686,8 +713,8 @@ int process_keyboard(int argc, char *argv[]) {
         }
       }
       // If holding keys, the last key remains pressed with its modifiers.
-      // If not holding, ensure a final release with only explicit modifiers is
-      // sent.
+      // If not holding, ensure a final release with only explicit modifiers
+      // is sent.
       if (!hold_keys && seq_len > 0) {
         memset(&report[2], 0, KEYBOARD_REPORT_SIZE - 2);
         report[0] = modifiers; // Restore original explicit modifiers
@@ -726,11 +753,77 @@ int process_keyboard(int argc, char *argv[]) {
   return EXIT_SUCCESS;
 }
 
-/* Process mouse commands */
+/* Mouse Helper Functions */
+int send_mouse_move(int8_t x, int8_t y) {
+  if (!g_mouse_device)
+    return -1;
+  int fd = open(g_mouse_device, O_RDWR);
+  if (fd < 0)
+    return -1;
+
+  uint8_t report[8] = {0};
+  report[1] = x;
+  report[2] = y;
+
+  if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) {
+    close(fd);
+    return -1;
+  }
+
+  // Minimal zero report to ensure state is clean? Not strictly required for
+  // relative moves but good for consistency.
+  memset(report, 0, g_mouse_report_size);
+  // write(fd, report, g_mouse_report_size);
+
+  close(fd);
+  return 0;
+}
+
+int send_mouse_press(uint8_t button) {
+  if (!g_mouse_device)
+    return -1;
+  int fd = open(g_mouse_device, O_RDWR);
+  if (fd < 0)
+    return -1;
+
+  uint8_t report[8] = {0};
+  report[0] = button;
+
+  if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) {
+    close(fd);
+    return -1;
+  }
+  close(fd);
+  return 0;
+}
+
+int send_mouse_release() {
+  if (!g_mouse_device)
+    return -1;
+  int fd = open(g_mouse_device, O_RDWR);
+  if (fd < 0)
+    return -1;
+
+  uint8_t report[8] = {0};
+  if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) {
+    close(fd);
+    return -1;
+  }
+  close(fd);
+  return 0;
+}
+
+int send_mouse_click(uint8_t button) {
+  if (send_mouse_press(button) != 0)
+    return -1;
+  usleep(30000); // 30ms
+  return send_mouse_release();
+}
 int process_mouse(int argc, char *argv[]) {
   int fd;
-  // Mouse report: [Buttons] [X delta] [Y delta] [VScroll delta] [HScroll delta
-  // (optional)] Use a buffer large enough for both 4- and 5-byte reports
+  // Mouse report: [Buttons] [X delta] [Y delta] [VScroll delta] [HScroll
+  // delta (optional)] Use a buffer large enough for both 4- and 5-byte
+  // reports
   uint8_t report[8] = {0};
   // Some descriptors might use 5 bytes to include HScroll separately.
   // Adapt MOUSE_REPORT_SIZE and indexing if necessary.
@@ -779,22 +872,9 @@ int process_mouse(int argc, char *argv[]) {
                    ? 127
                    : ((y_val_long < -127) ? -127 : (int8_t)y_val_long);
 
-    report[1] = x; // X movement
-    report[2] = y; // Y movement
-
-    if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) {
-      fprintf(stderr, "Error writing mouse move report: %s\n", strerror(errno));
-      close(fd);
+    close(fd); // Helper opens its own
+    if (send_mouse_move(x, y) != 0)
       return EXIT_FAILURE;
-    }
-    // Send a zero report immediately after move to stop it (good practice)
-    memset(report, 0, g_mouse_report_size);
-    usleep(1000); // Minimal delay needed? Maybe not for move.
-    if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) {
-      fprintf(stderr, "Warning: Error writing zero move report: %s\n",
-              strerror(errno));
-      // Non-fatal, movement likely still occurred.
-    }
 
   } else if (strcmp(action, "click") == 0) {
     uint8_t button = MOUSE_BTN_LEFT; /* Default to left button */
@@ -810,27 +890,10 @@ int process_mouse(int argc, char *argv[]) {
                 argv[2]);
       }
     }
-
-    /* Press button */
-    report[0] = button;
-    if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) {
-      fprintf(stderr, "Error writing mouse button press report: %s\n",
-              strerror(errno));
-      close(fd);
+    close(fd);
+    if (send_mouse_click(button) != 0)
       return EXIT_FAILURE;
-    }
 
-    /* Short delay */
-    usleep(30000); // 30ms
-
-    /* Release button */
-    report[0] = 0;
-    if (write(fd, report, MOUSE_REPORT_SIZE) != MOUSE_REPORT_SIZE) {
-      fprintf(stderr, "Error writing mouse button release report: %s\n",
-              strerror(errno));
-      close(fd);
-      return EXIT_FAILURE;
-    }
   } else if (strcmp(action, "doubleclick") == 0) {
     uint8_t button = MOUSE_BTN_LEFT; /* Double-click is typically left button */
 
@@ -839,51 +902,13 @@ int process_mouse(int argc, char *argv[]) {
       fprintf(stderr,
               "Warning: doubleclick does not take additional arguments.\n");
     }
+    close(fd);
+    if (send_mouse_click(button) != 0)
+      return EXIT_FAILURE;
+    usleep(100000);
+    if (send_mouse_click(button) != 0)
+      return EXIT_FAILURE;
 
-    /* First click */
-    report[0] = button;
-    if (write(fd, report, g_mouse_report_size) !=
-        g_mouse_report_size) { /* Press */
-      fprintf(stderr,
-              "Error writing mouse button press report (1st click): %s\n",
-              strerror(errno));
-      close(fd);
-      return EXIT_FAILURE;
-    }
-    usleep(30000);
-    report[0] = 0;
-    if (write(fd, report, g_mouse_report_size) !=
-        g_mouse_report_size) { /* Release */
-      fprintf(stderr,
-              "Error writing mouse button release report (1st click): %s\n",
-              strerror(errno));
-      close(fd);
-      return EXIT_FAILURE;
-    }
-
-    /* Delay between clicks (adjust as needed for OS sensitivity) */
-    usleep(100000); // 100ms
-
-    /* Second click */
-    report[0] = button;
-    if (write(fd, report, g_mouse_report_size) !=
-        g_mouse_report_size) { /* Press */
-      fprintf(stderr,
-              "Error writing mouse button press report (2nd click): %s\n",
-              strerror(errno));
-      close(fd);
-      return EXIT_FAILURE;
-    }
-    usleep(30000);
-    report[0] = 0;
-    if (write(fd, report, g_mouse_report_size) !=
-        g_mouse_report_size) { /* Release */
-      fprintf(stderr,
-              "Error writing mouse button release report (2nd click): %s\n",
-              strerror(errno));
-      close(fd);
-      return EXIT_FAILURE;
-    }
   } else if (strcmp(action, "down") == 0) {
     uint8_t button = MOUSE_BTN_LEFT; /* Default to left button */
 
@@ -898,28 +923,15 @@ int process_mouse(int argc, char *argv[]) {
                 argv[2]);
       }
     }
-
-    /* Press button without releasing */
-    report[0] = button;
-    if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) {
-      fprintf(stderr, "Error writing mouse button press report: %s\n",
-              strerror(errno));
-      close(fd);
+    close(fd);
+    if (send_mouse_press(button) != 0)
       return EXIT_FAILURE;
-    }
+
   } else if (strcmp(action, "up") == 0) {
     // Argument check (should not have extra args)
     if (argc > 2) {
       fprintf(stderr, "Warning: up does not take additional arguments.\n");
     }
-    /* Release all buttons */
-    report[0] = 0;
-    // Also clear movement/scroll state just in case
-    report[1] = 0;
-    report[2] = 0;
-    report[3] = 0;
-    // report[4] = 0; // If using 5-byte report
-
     if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) {
       fprintf(stderr, "Error writing mouse button release report: %s\n",
               strerror(errno));

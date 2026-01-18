@@ -2,42 +2,42 @@ CC = gcc
 CROSS_CC = zig cc
 CFLAGS = -Wall -Wextra -O2
 LDFLAGS = 
-TARGET_ARM64 = aarch64-linux-musl
-TARGET_X86_64 = x86_64-linux-musl
-TARGET_ARM = arm-linux-musleabi
-TARGET_X86 = x86-linux-musl
-
 TARGET = hid-gadget
 MOCK_TARGET = hid-gadget-mock
 
+# Track only the source files you have
+SRC = hid-gadget.c tui.c
+
+# Architectures to build
+ARCHS = arm64 x86_64 arm x86
+
+# Mapping names to Zig target triples
+TARGET_arm64 = aarch64-linux-musl
+TARGET_x86_64 = x86_64-linux-musl
+TARGET_arm = arm-linux-musleabi
+TARGET_x86 = x86-linux-musl
+
 all: $(TARGET)
 
-$(TARGET): hid-gadget.c tui.c
-	$(CC) $(CFLAGS) -o $@ hid-gadget.c tui.c $(LDFLAGS)
+$(TARGET): $(SRC)
+	$(CC) $(CFLAGS) -o $@ $(SRC) $(LDFLAGS)
 
-$(MOCK_TARGET): hid-gadget.c tui.c
-	$(CC) $(CFLAGS) -DMOCK_HID -o $@ hid-gadget.c tui.c $(LDFLAGS)
+$(MOCK_TARGET): $(SRC)
+	$(CC) $(CFLAGS) -DMOCK_HID -o $@ $(SRC) $(LDFLAGS)
 
-# Functional static binaries for Android/Linux
-static-arm64: hid-gadget.c tui.c
-	$(CROSS_CC) --target=$(TARGET_ARM64) -static $(CFLAGS) -o hid-gadget-arm64-static hid-gadget.c tui.c $(LDFLAGS)
+# This rule handles directory creation and compilation in one go
+static-%: $(SRC)
+	@mkdir -p ./blobs/$*
+	$(CROSS_CC) --target=$(TARGET_$(subst -,_,$*)) -static $(CFLAGS) -o hid-gadget-$*-static $(SRC) $(LDFLAGS)
+	cp hid-gadget-$*-static ./blobs/$*/hid-gadget
 
-static-x86_64: hid-gadget.c tui.c
-	$(CROSS_CC) --target=$(TARGET_X86_64) -static $(CFLAGS) -o hid-gadget-x86_64-static hid-gadget.c tui.c $(LDFLAGS)
+static: $(addprefix static-, $(ARCHS))
 
-static-arm: hid-gadget.c tui.c
-	$(CROSS_CC) --target=$(TARGET_ARM) -static $(CFLAGS) -o hid-gadget-arm-static hid-gadget.c tui.c $(LDFLAGS)
-
-static-x86: hid-gadget.c tui.c
-	$(CROSS_CC) --target=$(TARGET_X86) -static $(CFLAGS) -o hid-gadget-x86-static hid-gadget.c tui.c $(LDFLAGS)
-
-static: static-arm64 static-x86_64 static-arm static-x86
-
-# Mock static binary for testing parsing on PC
-mock-static: hid-gadget.c tui.c
-	$(CC) $(CFLAGS) -static -DMOCK_HID -o hid-gadget-mock-static hid-gadget.c tui.c $(LDFLAGS)
+mock-static: $(SRC)
+	$(CC) $(CFLAGS) -static -DMOCK_HID -o hid-gadget-mock-static $(SRC) $(LDFLAGS)
 
 clean:
-	rm -f $(TARGET) $(MOCK_TARGET) hid-gadget-*-static hid-gadget-arm64 hid-gadget-test-arm64
+	rm -f $(TARGET) $(MOCK_TARGET) *-static
+	rm -rf ./blobs/*
 
-.PHONY: all mock-static static static-arm64 static-x86_64 clean
+.PHONY: all mock-static static clean

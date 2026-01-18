@@ -1,5 +1,23 @@
 # Changelog
 
+## [v1.35.3] - 2026-01-18
+### Added
+- **Automated CI/CD**: Added GitHub Actions workflow (`release.yml`) for zero-touch releases.
+- **Dynamic Attribution**: Build script now dynamically updates `update.json` and `module.prop` URLs based on the hosting repository (e.g., `kelexine` vs `rexackermann`).
+- **Media Keys**: Full 14-key Consumer HID deck implemented in TUI with reliable 2-byte reports.
+- **Mouse Hold**: Added `[HL]`, `[HM]`, `[HR]` toggles for drag-and-drop operations.
+- **Radar Mouse**: Virtual analog stick control with aspect ratio correction and center-click.
+
+### Changed
+- **TUI Rewrite**: Complete rewrite of the TUI in C using `termbox2` (v1.30+).
+- **Consolidated Versioning**: Jumped to v1.35.x to mark the stability milestone.
+- **Repo Cleanup**: Removed experimental `portable/` mode to focus on Magisk module stability.
+- **Authorship**: Updated credits to correctly attribute `kelexine` (Original) and `rexackermann` (Contributor).
+
+### Fixed
+- **HID Consumer**: Fixed issue where media keys were interpreted as text input strings.
+- **Update JSON**: Fixed inconsistency between `zipUrl` naming and actual build artifacts.
+
 ## [v1.25.1] - 2026-01-18
 ### Fixed
 - **TUI Exit**: Fixed issue where `Ctrl+Alt+Q` was not being captured correctly in some terminals.
