@@ -306,6 +306,31 @@ void load_env_devices() {
   }
 }
 
+/* Native Auto-Recovery for Android/Magisk */
+void attempt_hid_recovery() {
+  static int recovery_attempted = 0;
+  if (recovery_attempted)
+    return;
+  recovery_attempted = 1;
+
+  if (access("/system/bin/hid-setup", F_OK) == 0) {
+    fprintf(
+        stderr,
+        "\x1b[1;33m[!] HID devices missing. Attempting auto-fix...\x1b[0m\n");
+    // We attempt to run the setup script which handles UDC binding
+    int ret = system("setprop sys.usb.config hid && /system/bin/hid-setup");
+    if (ret == 0) {
+      // Small delay for udev/devd to settle nodes
+      usleep(250000);
+      find_hidg_devices();
+      if (g_keyboard_device || g_mouse_device || g_consumer_device) {
+        fprintf(stderr, "\x1b[1;32m[+] Auto-fix successful. HID devices "
+                        "restored.\x1b[0m\n");
+      }
+    }
+  }
+}
+
 void print_usage(const char *prog_name) {
   if (!g_keyboard_device && !g_mouse_device && !g_consumer_device) {
     find_hidg_devices();
@@ -315,7 +340,7 @@ void print_usage(const char *prog_name) {
                   "36m┌────────────────────────────────────────────────────────"
                   "─┐\x1b[0m\n");
   fprintf(stderr, "\x1b[1;36m│ \x1b[1;37m📱 HID GADGET CONTROLLER "
-                  "\x1b[1;33mv1.38.0\x1b[1;36m                 │\x1b[0m\n");
+                  "\x1b[1;33mv1.38.1\x1b[1;36m                 │\x1b[0m\n");
   fprintf(stderr, "\x1b[1;"
                   "36m└────────────────────────────────────────────────────────"
                   "─┘\x1b[0m\n");
@@ -1143,6 +1168,8 @@ int main(int argc, char *argv[]) {
   // and the subsequent arguments starting from argv[1]
   int result = EXIT_FAILURE; // Default result
   if (strcmp(command, "keyboard") == 0) {
+    if (!g_keyboard_device)
+      attempt_hid_recovery();
     if (!g_keyboard_device) {
       fprintf(stderr, "Error: No keyboard device available. Set "
                       "HID_KEYBOARD_DEV or run setup.\n");
@@ -1150,6 +1177,8 @@ int main(int argc, char *argv[]) {
     }
     result = process_keyboard(argc - 1, &argv[1]);
   } else if (strcmp(command, "mouse") == 0) {
+    if (!g_mouse_device)
+      attempt_hid_recovery();
     if (!g_mouse_device) {
       fprintf(stderr, "Error: No mouse device available. Set HID_MOUSE_DEV or "
                       "run setup.\n");
@@ -1157,6 +1186,8 @@ int main(int argc, char *argv[]) {
     }
     result = process_mouse(argc - 1, &argv[1]);
   } else if (strcmp(command, "consumer") == 0) {
+    if (!g_consumer_device)
+      attempt_hid_recovery();
     if (!g_consumer_device) {
       fprintf(stderr, "Error: No consumer device available. Set "
                       "HID_CONSUMER_DEV or run setup.\n");
@@ -1164,12 +1195,16 @@ int main(int argc, char *argv[]) {
     }
     result = process_consumer(argc - 1, &argv[1]);
   } else if (strcmp(command, "tui") == 0) {
+    if (!g_keyboard_device)
+      attempt_hid_recovery();
     if (!g_keyboard_device) {
       fprintf(stderr, "Error: No keyboard device available for TUI.\n");
       return EXIT_FAILURE;
     }
     result = run_tui();
   } else if (strcmp(command, "ducky") == 0) {
+    if (!g_keyboard_device)
+      attempt_hid_recovery();
     if (!g_keyboard_device) {
       // Ducky needs keyboard usually
       fprintf(stderr,

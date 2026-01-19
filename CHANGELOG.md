@@ -1,5 +1,11 @@
 # Changelog
 
+## [v1.38.1] - 2026-01-20
+### Added
+- **Native Universal Auto-Recovery**: The core `hid-gadget` binary now automatically detects missing HID devices and attempts to re-initialize them via `hid-setup`. Works across all subcommands (`keyboard`, `mouse`, `consumer`, `tui`, `ducky`).
+- **Proactive Service Initialization**: `service.sh` now forces HID configuration on boot to prevent "no device" errors on the first run.
+- **Repository Restructuring**: Reorganized the codebase into a clean `src/`, `include/`, and `scripts/` hierarchy.
+
 ## [v1.38.0] - 2026-01-20
 ### DuckyScript 3.0 Specification (100% Compliance)
 - **Feature Complete**: Full implementation of DuckyScript 3.0 interpreter.
