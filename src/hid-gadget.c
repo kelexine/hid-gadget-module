@@ -8,7 +8,9 @@
  * Dynamically finds the first three /dev/hidg* devices.
  */
 
-#include "tui.h"
+#include "../include/ducky.h"
+#include "../include/hid_interface.h"
+#include "../include/tui.h"
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
@@ -76,7 +78,7 @@ static int g_mouse_support_hscroll = 0;
 #define MOUSE_BTN_MIDDLE (1 << 2)
 
 /* Keyboard usage table - mapping ASCII characters to HID usage codes */
-static const uint8_t usage_table[128] = {
+static const uint8_t usage_table_us[128] = {
     0,  0,  0,  0,
     0,  0,  0,  0, /* 0-7 */
     42, 43, 40, 0,
@@ -112,8 +114,11 @@ static const uint8_t usage_table[128] = {
 };
 
 /* Shift needed for these characters (US layout assumed) */
-static const char *shift_chars =
+static const char *shift_chars_us =
     "!@#$%^&*()_+{}|:\"<>?~ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+const uint8_t *current_usage_table = NULL;
+const char *current_shift_chars = NULL;
 
 /* Function key mapping */
 struct fn_key {
@@ -146,6 +151,28 @@ static const struct consumer_key consumer_keys[] = {
     {"BRIGHTNESS+", 0x006F}, {"BRIGHTNESS-", 0x0070}, {NULL, 0}};
 
 // Structure to hold device info for sorting
+int set_hid_locale(const char *name) {
+  if (strcasecmp(name, "US") == 0) {
+    current_usage_table = usage_table_us;
+    current_shift_chars = shift_chars_us;
+    return 0;
+  }
+  fprintf(stderr,
+          "[HID-HW] Locale '%s' not supported yet. Falling back to US.\n",
+          name);
+  return -1;
+}
+
+int send_raw_hid_report(const uint8_t *report, size_t size) {
+  if (!g_keyboard_device)
+    return -1;
+  int fd = open(g_keyboard_device, O_RDWR);
+  if (fd < 0)
+    return -1;
+  int n = write(fd, report, size);
+  close(fd);
+  return (n == (int)size) ? 0 : -1;
+}
 typedef struct {
   char name[NAME_MAX]; // From <dirent.h>
   int number;
@@ -280,49 +307,67 @@ void load_env_devices() {
 }
 
 void print_usage(const char *prog_name) {
-  // Ensure devices were found before printing usage
   if (!g_keyboard_device && !g_mouse_device && !g_consumer_device) {
-    fprintf(stderr,
-            "Error: HID Gadget devices not initialized. Cannot print usage.\n");
-    // Attempt to find them again, or provide a generic message
     find_hidg_devices();
   }
 
-  fprintf(stderr, "HID Gadget Controller v1.35.6\n"); // Script will update this
-  fprintf(stderr, "Usage: %s [keyboard|mouse|consumer] [options]\n", prog_name);
-  fprintf(stderr, "\nKeyboard mode (uses %s):\n", g_keyboard_device);
-  fprintf(stderr, "  %s keyboard [--hold] [--release] [modifiers] sequence\n",
+  fprintf(stderr, "\n\x1b[1;"
+                  "36m┌────────────────────────────────────────────────────────"
+                  "─┐\x1b[0m\n");
+  fprintf(stderr, "\x1b[1;36m│ \x1b[1;37m📱 HID GADGET CONTROLLER "
+                  "\x1b[1;33mv1.38.0\x1b[1;36m                 │\x1b[0m\n");
+  fprintf(stderr, "\x1b[1;"
+                  "36m└────────────────────────────────────────────────────────"
+                  "─┘\x1b[0m\n");
+
+  fprintf(stderr,
+          "\n\x1b[1;37mUSAGE:\x1b[0m %s \x1b[1;32m<command>\x1b[0m [options]\n",
           prog_name);
-  fprintf(stderr,
-          "    modifiers: CTRL, ALT, SHIFT, GUI (can be combined with -)\n");
-  fprintf(stderr,
-          "               Prefix with R for right-side keys (e.g., RCTRL)\n");
-  fprintf(stderr,
-          "    special keys: F1-F12, ESC, TAB, etc. (case-insensitive)\n");
-  fprintf(stderr,
-          "    sequence: String of characters or a single special key name.\n");
 
-  fprintf(stderr, "\nMouse mode (uses %s):\n",
-          g_mouse_device ? g_mouse_device : "<none>");
-  fprintf(stderr, "  %s mouse [action] [parameters]\n", prog_name);
+  fprintf(stderr, "\n\x1b[1;34m[ ⌨️  KEYBOARD ]\x1b[0m\n");
+  fprintf(stderr, "  \x1b[1;32mkeyboard\x1b[0m "
+                  "[\x1b[1;35m--hold\x1b[0m|\x1b[1;35m--release\x1b[0m] "
+                  "[\x1b[1;33mmodifiers\x1b[0m] \x1b[1;37m<sequence>\x1b[0m\n");
+  fprintf(stderr, "  \x1b[1;30mDescription:\x1b[0m Sends text or raw key "
+                  "combos to the target.\n");
+  fprintf(stderr, "  \x1b[1;30mModifiers:\x1b[0m   CTRL, ALT, SHIFT, GUI "
+                  "(Prefix 'R' for Right-side keys)\n");
+  fprintf(stderr, "  \x1b[1;30mSpecials:\x1b[0m    F1-F12, ESC, TAB, ENTER, "
+                  "SPACE, UP, DOWN, LEFT, RIGHT\n");
+  fprintf(stderr, "  \x1b[1;30mExample:\x1b[0m     %s keyboard CTRL-ALT-DEL\n",
+          prog_name);
+
+  fprintf(stderr, "\n\x1b[1;35m[ 🖱️  MOUSE ]\x1b[0m\n");
+  fprintf(stderr, "  \x1b[1;32mmouse move\x1b[0m \x1b[1;37m<X> <Y>\x1b[0m      "
+                  "- Relative motion (-127 to 127)\n");
+  fprintf(stderr, "  \x1b[1;32mmouse click\x1b[0m \x1b[1;37m[btn]\x1b[0m     - "
+                  "left (default), right, middle\n");
+  fprintf(stderr, "  \x1b[1;32mmouse scroll\x1b[0m \x1b[1;37m<V> [H]\x1b[0m  - "
+                  "Scroll vertical/horizontal\n");
+  fprintf(stderr, "  \x1b[1;32mmouse down/up\x1b[0m         - Latch/Release "
+                  "specific buttons\n");
+
+  fprintf(stderr, "\n\x1b[1;31m[ 🎵 MEDIA ]\x1b[0m\n");
+  fprintf(stderr, "  \x1b[1;32mconsumer\x1b[0m \x1b[1;37m<action>\x1b[0m\n");
+  fprintf(stderr, "  \x1b[1;30mActions:\x1b[0m     PLAY, PAUSE, MUTE, VOL+, "
+                  "VOL-, BRIGHTNESS+, BRIGHTNESS-\n");
+
+  fprintf(stderr, "\n\x1b[1;33m[ 🦆 DUCKYSCRIPT 3.0 ]\x1b[0m\n");
   fprintf(
       stderr,
-      "    move X Y       - Move mouse by X,Y relative units (-127 to 127)\n");
-  fprintf(stderr,
-          "    click [button] - Click button (left(default),right,middle)\n");
-  fprintf(stderr, "    doubleclick    - Double click left button\n");
-  fprintf(stderr, "    down [button]  - Press and hold button "
-                  "(left(default),right,middle)\n");
-  fprintf(stderr, "    up             - Release all held buttons\n");
-  fprintf(stderr, "    scroll V [H]   - Scroll V(vertical) H(horizontal, "
-                  "optional) units (-127 to 127)\n");
+      "  \x1b[1;32mducky\x1b[0m \x1b[1;37m<path>\x1b[0m [\x1b[1;35m--os\x1b[0m "
+      "\x1b[1;33mOS\x1b[0m]       - Load & Execute spec-compliant scripts.\n");
+  fprintf(stderr, "  \x1b[1;30mOS Profiles:\x1b[0m WINDOWS (default), MACOS, "
+                  "LINUX, ANDROID\n");
+  fprintf(stderr, "  \x1b[1;30mInteractive:\x1b[0m Use '-' as path to read "
+                  "from stdin (Ctrl+D to finish).\n");
 
-  fprintf(stderr, "\nConsumer mode (uses %s):\n",
-          g_consumer_device ? g_consumer_device : "<none>");
-  fprintf(stderr, "  %s consumer [action]\n", prog_name);
-  fprintf(
-      stderr,
-      "    actions: PLAY, PAUSE, MUTE, VOL+, VOL-, etc. (case-insensitive)\n");
+  fprintf(stderr, "\n\x1b[1;32m[ 🖥️  INTERACTIVE TUI ]\x1b[0m\n");
+  fprintf(stderr, "  \x1b[1;32mtui\x1b[0m                       - Launch full "
+                  "terminal graphical remote\n");
+
+  fprintf(stderr, "\n\x1b[1;30mFor advanced automation and variable docs, "
+                  "visit the official README.\x1b[0m\n\n");
 
   exit(EXIT_FAILURE);
 }
@@ -491,10 +536,12 @@ int send_key_sequence(const char *modifiers_str, const char *sequence) {
       uint8_t current_mods = modifiers;
 
       if ((unsigned char)c < 128)
-        usage = usage_table[(unsigned char)c];
+        usage = (current_usage_table ? current_usage_table
+                                     : usage_table_us)[(unsigned char)c];
 
       if (usage != 0) {
-        if (strchr(shift_chars, c))
+        if (strchr(current_shift_chars ? current_shift_chars : shift_chars_us,
+                   c))
           current_mods |= MOD_SHIFT_LEFT;
 
         report[0] = current_mods;
@@ -663,12 +710,14 @@ int process_keyboard(int argc, char *argv[]) {
 
         /* Get usage code */
         if ((unsigned char)c < 128) {
-          usage = usage_table[(unsigned char)c];
+          usage = (current_usage_table ? current_usage_table
+                                       : usage_table_us)[(unsigned char)c];
         }
 
         if (usage != 0) {
           /* Add shift modifier if needed */
-          if (strchr(shift_chars, c)) {
+          if (strchr(current_shift_chars ? current_shift_chars : shift_chars_us,
+                     c)) {
             current_modifiers |= MOD_SHIFT_LEFT;
           }
 
@@ -1120,6 +1169,29 @@ int main(int argc, char *argv[]) {
       return EXIT_FAILURE;
     }
     result = run_tui();
+  } else if (strcmp(command, "ducky") == 0) {
+    if (!g_keyboard_device) {
+      // Ducky needs keyboard usually
+      fprintf(stderr,
+              "Warning: No keyboard device found. Ducky scripts might fail.\n");
+    }
+    ducky_load_profile();
+
+    const char *script = "-";
+    int script_idx = -1;
+    for (int i = 2; i < argc; i++) {
+      if (strcmp(argv[i], "--os") == 0 || strcmp(argv[i], "-p") == 0) {
+        if (i + 1 < argc) {
+          ducky_set_var("_OS", argv[i + 1]);
+          i++;
+        }
+      } else if (script_idx < 0) {
+        script_idx = i;
+      }
+    }
+    if (script_idx >= 2)
+      script = argv[script_idx];
+    result = ducky_execute_script(script);
   } else {
     fprintf(stderr, "Error: Unknown command '%s'\n", command);
     print_usage(argv[0]); // Will exit
@@ -1127,4 +1199,118 @@ int main(int argc, char *argv[]) {
 
   // cleanup_device_paths(); // Called automatically by atexit
   return result;
+}
+
+/* --- DuckyScript Support Impl --- */
+static uint8_t g_held_keys[6] = {0};
+static uint8_t g_held_mods = 0;
+
+void hid_sleep(int ms) { usleep(ms * 1000); }
+
+static void send_held_state() {
+  send_keyboard_report(g_held_mods, g_held_keys[0], g_held_keys[1],
+                       g_held_keys[2], g_held_keys[3], g_held_keys[4],
+                       g_held_keys[5]);
+}
+
+uint8_t get_key_code(const char *name) {
+  // Basic lookup - minimal implementation using usage_table reverse or helper?
+  // For now, rely on utility provided or brute force usage_table?
+  // Actually send_key_sequence does lookup internaly.
+  // We need a helper to get code from name.
+  // Let's iterate usage table? No, it's ASCII to code.
+  // We need string ("ENTER") to code.
+  // fn_keys has this!
+  for (int i = 0; fn_keys[i].name != NULL; i++) {
+    if (strcasecmp(name, fn_keys[i].name) == 0)
+      return fn_keys[i].usage;
+  }
+  // Check ASCII
+  if (strlen(name) == 1) {
+    unsigned char c = (unsigned char)name[0];
+    if (c < 128)
+      return (current_usage_table ? current_usage_table : usage_table_us)[c];
+  }
+  return 0;
+}
+
+int hold_key(const char *key_name) {
+  if (strcasecmp(key_name, "CTRL") == 0)
+    g_held_mods |= (MOD_CTRL_LEFT);
+  else if (strcasecmp(key_name, "SHIFT") == 0)
+    g_held_mods |= (MOD_SHIFT_LEFT);
+  else if (strcasecmp(key_name, "ALT") == 0)
+    g_held_mods |= (MOD_ALT_LEFT);
+  else if (strcasecmp(key_name, "GUI") == 0 ||
+           strcasecmp(key_name, "WINDOWS") == 0)
+    g_held_mods |= (MOD_GUI_LEFT);
+  else {
+    uint8_t code = get_key_code(key_name);
+    if (code) {
+      for (int i = 0; i < 6; i++) {
+        if (g_held_keys[i] == 0) {
+          g_held_keys[i] = code;
+          break;
+        }
+      }
+    }
+  }
+  send_held_state();
+  return 0;
+}
+
+int release_key(const char *key_name) {
+  if (strcasecmp(key_name, "CTRL") == 0)
+    g_held_mods &= ~(MOD_CTRL_LEFT);
+  else if (strcasecmp(key_name, "SHIFT") == 0)
+    g_held_mods &= ~(MOD_SHIFT_LEFT);
+  else if (strcasecmp(key_name, "ALT") == 0)
+    g_held_mods &= ~(MOD_ALT_LEFT);
+  else if (strcasecmp(key_name, "GUI") == 0)
+    g_held_mods &= ~(MOD_GUI_LEFT);
+  else {
+    uint8_t code = get_key_code(key_name);
+    if (code) {
+      for (int i = 0; i < 6; i++) {
+        if (g_held_keys[i] == code) {
+          g_held_keys[i] = 0;
+        }
+      }
+      // Pack
+      // (Optional: move zeros to end)
+    }
+  }
+  send_held_state();
+  return 0;
+}
+
+int release_all_keys(void) {
+  g_held_mods = 0;
+  memset(g_held_keys, 0, 6);
+  send_held_state();
+  return 0;
+}
+
+/* --- Mouse Support Impl --- */
+int send_mouse_report(uint8_t buttons, int8_t x, int8_t y, int8_t wheel,
+                      int8_t hwheel) {
+  if (!g_mouse_device)
+    return -1;
+  int fd = open(g_mouse_device, O_RDWR);
+  if (fd < 0)
+    return -1;
+
+  char report[8];
+  memset(report, 0, 8);
+  report[0] = buttons;
+  report[1] = x;
+  report[2] = y;
+  report[3] = wheel;
+  if (g_mouse_report_size > 4) {
+    report[4] = hwheel;
+  }
+
+  int ret = write(fd, report, g_mouse_report_size);
+  close(fd);
+  return (ret == g_mouse_report_size) ? 0 : -1;
 }

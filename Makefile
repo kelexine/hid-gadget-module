@@ -1,12 +1,16 @@
 CC = gcc
 CROSS_CC = zig cc
-CFLAGS = -Wall -Wextra -O2
+CFLAGS = -Wall -Wextra -O2 -Iinclude
 LDFLAGS = 
 TARGET = hid-gadget
 MOCK_TARGET = hid-gadget-mock
 
-# Track only the source files you have
-SRC = hid-gadget.c tui.c
+# Directories
+SRC_DIR = src
+INC_DIR = include
+
+# Track source files
+SRC = $(SRC_DIR)/hid-gadget.c $(SRC_DIR)/tui.c $(SRC_DIR)/ducky.c
 
 # Architectures to build
 ARCHS = arm64 x86_64 arm x86

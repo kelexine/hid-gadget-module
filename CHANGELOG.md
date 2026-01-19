@@ -1,5 +1,19 @@
 # Changelog
 
+## [v1.38.0] - 2026-01-20
+### DuckyScript 3.0 Specification (100% Compliance)
+- **Feature Complete**: Full implementation of DuckyScript 3.0 interpreter.
+  - **Logic**: Added `IF/ELSE/ENDIF`, `WHILE/ENDWHILE`, and `GOTO/LABEL` support.
+  - **Variables**: Complete support for `VAR $NAME`, `DEFINE`, and expression math (+, -, *, /).
+  - **Boolean Conditions**: Support for complex conditions with `&&` (AND) and `||` (OR).
+  - **System Variables**: Full set including `$_OS`, `$_RANDOM_INT`, `$_RANDOM_HEX`, `$_RANDOM_CHAR`, and `$_TIMESTAMP`.
+  - **Multiline Comments**: Implemented `REM_BLOCK` ... `END_REM_BLOCK`.
+  - **Platform Profiles**: Table-driven system for OS major/build metadata with CLI flags (`--os`).
+  - **Dynamic Overrides**: Auto-loading of `ducky_vars.ducky` for site-specific profiles.
+- **Improved CLI**:
+  - Colorized help text and more elaborative documentation for all subcommands.
+  - Added `-p` / `--os` flags to the `ducky` subcommand.
+
 ## [v1.35.6] - 2026-01-18
 ### Visual Overhaul
 - **Icons & Colors**: Replaced text labels with proper Unicode icons (⏪, ▶, 🔊, etc.) and added color coding (Cyan for Nav, Blue for Vol, Red for Mute/Stop) for a professional dashboard look.
