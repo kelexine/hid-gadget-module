@@ -40,10 +40,11 @@ jobs:
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: hid-gadget-module-*.zip
           generate_release_notes: true
+          fail_on_unmatched_files: true
           draft: false
           prerelease: false
         env:
