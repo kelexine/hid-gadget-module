@@ -1,39 +1,7 @@
 #!/system/bin/sh
-# hid-keyboard - Wrapper for HID keyboard gadget functionality
-
-print_usage() {
-  echo "Usage: hid-keyboard [--hold] [--release] [modifiers] sequence"
-  echo "  modifiers: CTRL, ALT, SHIFT, GUI (can be combined with -)"
-  echo "  special keys: F1-F12, ESC, TAB, etc."
-  echo "  options:"
-  echo "    --delay <ms>    - Set per-keystroke delay (default from module property 'keyboard.delayMs' or 10ms)"
-}
-
-if [ $# -lt 1 ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
-  print_usage
-  exit 1
+# Magisk/KernelSU hid-keyboard wrapper with auto-recovery
+if ! /system/bin/hid-gadget keyboard "$@"; then
+    echo "HID Keyboard failed, attempting auto-fix..."
+    su -c "setprop sys.usb.config hid && /system/bin/hid-setup"
+    exec /system/bin/hid-gadget keyboard "$@"
 fi
-
-# Determine default delay from module property if available
-DEFAULT_DELAY=10
-MOD_PROP="/data/adb/modules/hid-gadget/module.prop"
-if [ -f "$MOD_PROP" ]; then
-  PROP_DELAY=$(grep -i '^keyboard\.delayMs=' "$MOD_PROP" | head -n1 | cut -d= -f2 | tr -d '[:space:]')
-  case "$PROP_DELAY" in
-    ''|*[!0-9]*) : ;;
-    *) DEFAULT_DELAY="$PROP_DELAY" ;;
-  esac
-fi
-
-# Parse optional --delay <ms>
-DELAY="$DEFAULT_DELAY"
-if [ "$1" = "--delay" ]; then
-  shift
-  if [ -n "$1" ]; then DELAY="$1"; shift; fi
-fi
-
-# Export as env var for the C binary to use
-export HID_KEY_DELAY_MS="$DELAY"
-
-# Just forward all arguments to hid-gadget
-exec hid-gadget keyboard "$@"

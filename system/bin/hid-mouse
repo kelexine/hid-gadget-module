@@ -1,28 +1,7 @@
 #!/system/bin/sh
-# hid-mouse - Wrapper for HID mouse gadget functionality
-
-print_usage() {
-  echo "Usage: hid-mouse [action] [parameters]"
-  echo "  move X Y         - Move mouse by X,Y relative units"
-  echo "  click [button]   - Click button (left,right,middle)"
-  echo "  doubleclick      - Double click left button"
-  echo "  down [button]    - Press and hold button"
-  echo "  up               - Release held button(s)"
-  echo "  scroll V [H]     - Scroll vertical V and optional horizontal H units"
-  echo "  Note: Horizontal scroll is enabled if the module property 'mouse.hscroll=true' is set."
-}
-
-# Help
-if [ $# -lt 1 ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
-  print_usage
-  exit 1
+# Magisk/KernelSU hid-mouse wrapper with auto-recovery
+if ! /system/bin/hid-gadget mouse "$@"; then
+    echo "HID Mouse failed, attempting auto-fix..."
+    su -c "setprop sys.usb.config hid && /system/bin/hid-setup"
+    exec /system/bin/hid-gadget mouse "$@"
 fi
-
-# Auto-enable H-scroll if configured in the installed module
-MOD_PROP="/data/adb/modules/hid-gadget/module.prop"
-if [ -f "$MOD_PROP" ] && grep -qi '^mouse\.hscroll=\s*true' "$MOD_PROP"; then
-  export HID_MOUSE_HSCROLL=1
-fi
-
-# Forward all arguments to hid-gadget
-exec hid-gadget mouse "$@"

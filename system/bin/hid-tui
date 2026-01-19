@@ -1,0 +1,7 @@
+#!/system/bin/sh
+# Magisk/KernelSU hid-tui wrapper with auto-recovery
+if ! /system/bin/hid-gadget tui "$@"; then
+    echo "HID TUI failed, attempting auto-fix..."
+    su -c "setprop sys.usb.config hid && /system/bin/hid-setup"
+    exec /system/bin/hid-gadget tui "$@"
+fi

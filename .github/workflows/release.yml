@@ -1,0 +1,57 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.11.0
+
+      - name: Install Dependencies
+        run: sudo apt-get update && sudo apt-get install -y make zip
+
+      - name: Read Version
+        id: get_version
+        run: |
+          VERSION=$(grep "^version=" module.prop | cut -d'=' -f2)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Build Release Artifacts
+        run: |
+          chmod +x build_release.sh
+          # Pass current version (no bump) and repo slug
+          ./build_release.sh "${{ env.VERSION }}" "${{ github.repository }}"
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: hid-gadget-module-*.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Artifacts (Non-Tag / Setup)
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        uses: actions/upload-artifact@v4
+        with:
+          name: hid-gadget-module-${{ env.VERSION }}
+          path: hid-gadget-module-*.zip

@@ -1,194 +1,113 @@
-# HID Gadget Module for Magisk
+# 📱 USB HID Gadget Module & Terminal Controller
 
-This Magisk module provides USB HID (Human Interface Device) gadget functionality for Android devices. It allows your device to act as a USB keyboard, mouse, or consumer control device when connected to a computer.
+![Version](https://img.shields.io/badge/version-v1.35.6-blue?style=for-the-badge&logo=android)
+![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)
+![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Linux-orange?style=for-the-badge)
+![Architecture](https://img.shields.io/badge/arch-ARM64%20%7C%20ARM%20%7C%20x86__64%20%7C%20x86-purple?style=for-the-badge)
 
-## Features
+**Turn your Android device into a professional USB Human Interface Device.**
 
-### Keyboard Emulation
-- Full keyboard support with standard layout, function keys (F1-F12), and modifiers (Ctrl, Alt, Shift, GUI/Meta)
-- Special keys: Enter, Escape, Tab, media keys, etc.
-- Key combination support
+This Magisk module enables your rooted Android device to function as a **Keyboard**, **Mouse**, and **Media Remote** for any connected computer. It features a powerful, dependency-free **Text-Based User Interface (TUI)** that runs right in your terminal.
 
-### Mouse Emulation
-- Relative motion control
-- Button clicks (left, middle, right)
-- Double-click functionality
-- Press-and-hold actions
-- Vertical and horizontal scrolling
-- Smooth movements with variable speeds
+---
 
-### Consumer Control
-- Media playback controls (Play, Pause, Stop)
-- Volume controls (Up, Down, Mute)
-- Media navigation (Next, Previous, Forward, Rewind)
-- Brightness controls
+## ✨ Key Features
 
-## Installation
+### 🚀 **Universal & Robust**
+- **Zero Dependencies**: Built with `musl` libc and statically linked. No external libraries required.
+- **Cross-Platform**: Runs on **any** Android version (Magisk) and standard Linux distros.
+- **Auto-Recovery**: Intelligently detects HID failures and re-initializes the gadget driver automatically.
 
-1. Download the latest release ZIP from the [Releases page](https://github.com/kelexine/hid-gadget-module/releases)
-2. Install through Magisk Manager:
-   - Open Magisk Manager
-   - Tap on Modules
-   - Tap "Install from storage"
-   - Select the downloaded ZIP file
-   - Reboot your device after installation
+### 🖥️ **HID TUI (Terminal Interface)**
+The star of the show (`hid-tui`). A fully-featured GUI running inside your terminal:
+- **⌨️ Laptop-Style Keyboard**: Full 75% layout with clickable keys.
+- **🖱️ "Radar" Analog Mouse**: Virtual analog stick with aspect-ratio corrected movement and "Velocity Tap" precision.
+- **🤏 Drag & Drop**: Dedicated `[HL]`/`[HM]`/`[HR]` buttons to latch clicks for dragging.
+- **🎮 Media Deck**: Full 14-key remote control (`PLAY`, `VOL`, `MUTE`, `BRIGHTNESS`...).
+- **🌈 Visual Feedback**: Keys flash and buttons light up when pressed.
 
-### Requirements
+### 🛠️ **Power User Tools**
+- **Scriptable**: CLI tools (`hid-keyboard`, `hid-mouse`) for automation scripting.
+- **Sticky Modifiers**: Smart handling of `CTRL`, `ALT`, `SHIFT`, `WIN` for complex shortcuts.
 
-- Magisk v20.4 or newer
-- A device with USB OTG support and kernel configfs support
-- Root access
+---
 
-## Usage
+## 📥 Installation
 
-The tool automatically discovers and uses available HID gadget devices (`/dev/hidgX`). It dynamically identifies and assigns the first three HID gadget devices it finds:
-- First device: Keyboard
-- Second device: Mouse
-- Third device: Consumer controls
+1.  Download the latest `hid-gadget-module-vX.Y.Z.zip`.
+2.  Open **Magisk** > **Modules** > **Install from Storage**.
+3.  Select the zip file and reboot.
 
-This means you don't need to worry about specific device nodes - the tool handles this automatically.
+---
 
-### Keyboard Commands
+## 🎮 Usage Guide
 
-The `hid-keyboard` tool lets you send keyboard events:
-
+### 1. The TUI Controller (`hid-tui`)
+Launch it from a terminal (Termux or adb shell):
 ```bash
-# Type text
-hid-keyboard "Hello World"
-
-# Press special keys
-hid-keyboard F5
-hid-keyboard ENTER
-hid-keyboard ESC
-
-# Use modifiers
-hid-keyboard CTRL-ALT-DELETE
-hid-keyboard CTRL-C
-hid-keyboard ALT-TAB
-
-# Press and hold keys
-hid-keyboard --hold ALT
-hid-keyboard TAB
-hid-keyboard --release
-
-# Complex combinations
-hid-keyboard CTRL-ALT-F4
+su -c hid-tui
 ```
 
-### Mouse Commands
+#### **Interface Layout**
+- **Top Bar**: Media Controls (`PLAY`, `MUTE`, `VOL+`, etc.). Tap to control playback.
+- **Middle**: The **Radar Zone** `[+]`.
+    - Tap **Center** (`+`) to Left Click.
+    - Tap **Around Center** to move the mouse. Distance = Speed.
+- **Controls**:
+    - `[ L ]` `[ M ]` `[ R ]`: Standard clicks.
+    - `[ HL ]` `[ HM ]` `[ HR ]`: **Hold** toggles. Tap once to "lock" the button down (turns Magenta). Tap again to release. Ideal for dragging windows!
+    - `SENS`: Adjust mouse sensitivity.
+- **Bottom**: Full QWERTY keyboard.
 
-The `hid-mouse` tool provides mouse control:
+### 2. Command Line Interface
+Automate key presses and mouse movements from scripts.
 
+**Keyboard**:
 ```bash
-# Move the cursor (relative coordinates)
-hid-mouse move 10 0    # Move right
-hid-mouse move 0 -10   # Move up
-hid-mouse move -5 5    # Move left and down
-
-# Click buttons
-hid-mouse click        # Left click (default)
-hid-mouse click right  # Right click
-hid-mouse click middle # Middle click
-
-# Double-click
-hid-mouse doubleclick
-
-# Press and hold
-hid-mouse down         # Press and hold left button
-hid-mouse move 20 20   # Drag while holding
-hid-mouse up           # Release button
-
-# Scrolling
-# Vertical scrolling works with the default descriptor
-hid-mouse scroll 0 5   # Scroll down 5 units
-hid-mouse scroll 0 -5  # Scroll up 5 units
-# Horizontal scrolling depends on your HID descriptor (not enabled by default)
-# hid-mouse scroll 5 0   # Horizontal scroll requires a 5-byte mouse report descriptor
+hid-keyboard "Hello World"          # Type text
+hid-keyboard --hold "CTRL-ALT-DEL"  # Send combo
+hid-keyboard --release "CTRL-ALT-DEL"
 ```
 
-### Consumer Control Commands
-
-The `hid-consumer` tool controls media and related functions:
-
+**Mouse**:
 ```bash
-# Media playback
-hid-consumer PLAY
-hid-consumer PAUSE
-hid-consumer STOP
-hid-consumer NEXT
-hid-consumer PREVIOUS
-
-# Volume control
-hid-consumer VOL+
-hid-consumer VOL-
-hid-consumer MUTE
-
-# Other controls
-hid-consumer BRIGHTNESS+
-hid-consumer BRIGHTNESS-
+hid-mouse move 100 -50              # Move X=100, Y=-50
+hid-mouse click left                # Click left button
+hid-mouse press right               # Hold right button
 ```
 
-## Troubleshooting
-
-### Device Not Detected as HID
-
-1. Make sure USB debugging is disabled
-2. Try different USB cables
-3. Check that your kernel supports USB configfs
-4. Reboot your device
-5. Check logs with `logcat | grep hidg`
-
-### HID Device Detection and Overrides
-
-If automatic device detection isn't working or your device nodes are non-standard, you can override them via environment variables:
-
+**Consumer (Media)**:
 ```bash
-export HID_KEYBOARD_DEV=/dev/hidg3
-export HID_MOUSE_DEV=/dev/hidg1
-export HID_CONSUMER_DEV=/dev/hidg2
+hid-consumer VOL+                   # Volume Up
+hid-consumer PLAY                   # Play/Pause
+hid-consumer BRIGHTNESS+            # Screen Brightness
 ```
 
-Commands work with any available subset of devices. For a quick usage overview:
+---
+
+## 🏗️ Building From Source
+
+We provide an automated build script (`build_release.sh`) that handles versioning, compilation, and packaging.
+
+**Prerequisites**: `zig` (v0.11+), `make`, `zip`.
 
 ```bash
-hid-mouse --help
-hid-keyboard --help
-hid-consumer --help
+# Clone the repo
+git clone https://github.com/kelexine/hid-gadget-module
+cd hid-gadget-module
+
+# Build artifacts and create zip
+./build_release.sh auto
 ```
+This will create `hid-gadget-module-vX.Y.Z.zip` for all 4 architectures (`arm64`, `arm`, `x86_64`, `x86`).
 
-### Permission Issues
+---
 
-If you encounter permission errors when using the commands:
+## 👥 Credits & Authors
 
-```bash
-# Find which hidg devices are being used
-hid-keyboard
-# Fix permissions manually based on the output
-su -c chmod 666 /dev/hidg*
-```
+This project is a collaborative effort to bring the best HID experience to Android.
 
-### Commands Not Working
+- **[kelexine](https://github.com/kelexine)**: Original Author & Core Architecture.
+- **[rexackermann](https://github.com/rexackermann)**: Contributor, TUI Rewrite (v1.30+), & Universal Binary Port.
 
-1. Make sure your device is connected to a host computer
-2. Verify the module is properly installed and enabled in Magisk Manager
-3. Some functions may not be supported by all host computers
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgements
-
-- The Magisk development team
-- Linux kernel USB gadget documentation
-- All contributors and testers
+**License**: [MIT](LICENSE)
