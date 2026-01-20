@@ -34,9 +34,9 @@ jobs:
 
       - name: Build Release Artifacts
         run: |
-          chmod +x build_release.sh
+          chmod +x scripts/build_release.sh
           # Pass current version (no bump) and repo slug
-          ./build_release.sh "${{ env.VERSION }}" "${{ github.repository }}"
+          ./scripts/build_release.sh "${{ env.VERSION }}" "${{ github.repository }}"
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
