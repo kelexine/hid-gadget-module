@@ -359,7 +359,7 @@ static int eval_condition(const char *cond) {
 
   char lstr[MAX_VAR_VAL], rstr[MAX_VAR_VAL], op[4];
   int res = 0;
-  if (sscanf(work, "%s %3s %s", lstr, op, rstr) >= 3) {
+  if (sscanf(work, "%255s %3s %255s", lstr, op, rstr) >= 3) {
     const char *lv = lstr;
     const char *rv = rstr;
     // (OS logic removed here as get_system_var handles it now)
@@ -379,7 +379,7 @@ static int eval_condition(const char *cond) {
       else if (strcmp(op, "<=") == 0)
         res = (li <= ri);
     }
-  } else if (sscanf(work, "%s", lstr) == 1) {
+  } else if (sscanf(work, "%255s", lstr) == 1) {
     if (strcmp(lstr, "TRUE") == 0)
       res = 1;
     else if (strcmp(lstr, "FALSE") == 0)
@@ -481,8 +481,8 @@ static int exec_line(Script *s, int pc) {
     char *sub = substitute_vars(line);
     char var[MAX_VAR_NAME];
     int st, en;
-    if (sscanf(sub, "FOR $%s = %d TO %d", var, &st, &en) >= 3 ||
-        sscanf(sub, "FOR %s = %d TO %d", var, &st, &en) >= 3) {
+    if (sscanf(sub, "FOR $%63s = %d TO %d", var, &st, &en) >= 3 ||
+        sscanf(sub, "FOR %63s = %d TO %d", var, &st, &en) >= 3) {
       for (int v = st; v <= en; v++) {
         char b[16];
         snprintf(b, 16, "%d", v);
