@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.38.2] - 2026-01-20
+### Added
+- **hid-ducky wrapper**: Added a new shorthand wrapper for executing DuckyScripts with automatic recovery support.
+### Fixed
+- **Code Safety**: Added width specifiers to `sscanf` calls in `src/ducky.c` to prevent potential buffer overflows.
+- **CI/CD**: Fixed build script path in release workflow and restored upstream URLs in metadata files.
+
 ## [v1.38.1] - 2026-01-20
 ### Added
 - **Native Universal Auto-Recovery**: The core `hid-gadget` binary now automatically detects missing HID devices and attempts to re-initialize them via `hid-setup`. Works across all subcommands (`keyboard`, `mouse`, `consumer`, `tui`, `ducky`).

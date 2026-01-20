@@ -1,7 +1,7 @@
 id=hid-gadget
 name=HID Gadget
-version=v1.38.1
-versionCode=13801
+version=v1.38.2
+versionCode=13802
 author=kelexine
 description=USB HID Gadget with dependency-free C-based TUI keyboard and auto-recovery.
 updateJson=https://raw.githubusercontent.com/kelexine/hid-gadget-module/main/update.json

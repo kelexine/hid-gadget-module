@@ -275,7 +275,7 @@ void render_keyboard() {
 
   // Header Title
   draw_text(2, 0, TB_WHITE | TB_BOLD, TB_DEFAULT,
-            "HID INDUSTRIAL v1.38.1 | Tap EXIT or Ctrl+C to quit");
+            "HID INDUSTRIAL v1.38.2 | Tap EXIT or Ctrl+C to quit");
 
   // --- EXIT BUTTON ---
   draw_box(l.btn_x, l.btn_y, l.btn_w, l.btn_h, TB_WHITE | TB_BOLD, TB_RED);
