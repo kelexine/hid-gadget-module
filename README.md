@@ -98,7 +98,22 @@ hid-consumer BRIGHTNESS+            # Screen Brightness
 
 ---
 
-## �️ Building From Source
+## ⚠️ Known Limitations
+
+### 🦆 **DuckyScript 3.0**
+While this module implements the **100% Core Specification**, there are some platform-specific limitations:
+- **No `STORAGE` Command**: Unlike a physical USB Rubber Ducky, this module cannot mount a local SD card as a Mass Storage device via DuckyScript. You must use Android's native MTP/Storage features.
+- **`HID_SYNC` / `WAIT_FOR_BUTTON`**: These commands are currently stubs. Synchronizing with target LED states (e.g., waiting for CapsLock) depends heavily on the Android UDC driver support, which is inconsistent across devices.
+- **Extensions**: Custom Hak5 vendor extensions (non-core) are not supported.
+
+### 📱 **Hardware & Kernel**
+- **UDC Drivers**: Not all Android kernels support ConfigFS HID gadgets. If `hid-setup` fails, your kernel may lack `CONFIG_USB_CONFIGFS_F_HID`.
+- **USB Conflicts**: Enabling the HID gadget may temporarily disconnect other USB functions like ADB or MTP on some devices, depending on how your specific kernel handles USB compositions.
+- **OTG Requirement**: You must use a high-quality USB-C to USB-A (or equivalent) cable. Some "charging-only" cables lack the necessary data lines for HID communication.
+
+---
+
+## 🏗️ Building From Source
 
 We provide an automated build script that handles versioning, cross-compilation, and packaging.
 
