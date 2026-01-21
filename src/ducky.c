@@ -649,7 +649,7 @@ static int exec_line(Script *s, int pc) {
           for (int j = 0; mods_map[j]; j++)
             if (strcasecmp(tokens[i], mods_map[j]) == 0) {
               if (m_cnt++)
-                strcat(mods_str, " ");
+                strcat(mods_str, "-");
               if (strcasecmp(tokens[i], "CONTROL") == 0)
                 strcat(mods_str, "CTRL");
               else if (strcasecmp(tokens[i], "OPTION") == 0)

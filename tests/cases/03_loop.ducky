@@ -1,0 +1,4 @@
+VAR $I = 0
+FOR $I = 1 TO 2
+STRING x
+NEXT

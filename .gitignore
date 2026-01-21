@@ -1,8 +1,2 @@
-build/
-*.o
-hid-gadget-*-static
-hid-gadget-mock
-hid-gadget-test
-test_*
 *.zip
-.antigravity/
+

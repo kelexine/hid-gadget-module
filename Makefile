@@ -44,4 +44,7 @@ clean:
 	rm -f $(TARGET) $(MOCK_TARGET) *-static
 	rm -rf ./blobs/*
 
-.PHONY: all mock-static static clean
+test:
+	python3 tests/run_tests.py
+
+.PHONY: all mock-static static clean test
