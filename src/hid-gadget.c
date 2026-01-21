@@ -38,6 +38,36 @@ char *g_mouse_device = NULL;
 char *g_consumer_device = NULL;
 // --- End Dynamic Device Paths ---
 
+// --- Persistent File Descriptors ---
+static int g_fd_keyboard = -1;
+static int g_fd_mouse = -1;
+static int g_fd_consumer = -1;
+
+static int get_cached_fd(const char *path, int *cached_fd) {
+  if (!path)
+    return -1;
+  if (*cached_fd >= 0)
+    return *cached_fd;
+  *cached_fd = open(path, O_RDWR);
+  return *cached_fd;
+}
+
+void close_hid_fds() {
+  if (g_fd_keyboard >= 0) {
+    close(g_fd_keyboard);
+    g_fd_keyboard = -1;
+  }
+  if (g_fd_mouse >= 0) {
+    close(g_fd_mouse);
+    g_fd_mouse = -1;
+  }
+  if (g_fd_consumer >= 0) {
+    close(g_fd_consumer);
+    g_fd_consumer = -1;
+  }
+}
+// --- End Persistent File Descriptors ---
+
 /* Keyboard report descriptor */
 #define KEYBOARD_REPORT_SIZE 8
 
@@ -166,11 +196,10 @@ int set_hid_locale(const char *name) {
 int send_raw_hid_report(const uint8_t *report, size_t size) {
   if (!g_keyboard_device)
     return -1;
-  int fd = open(g_keyboard_device, O_RDWR);
+  int fd = get_cached_fd(g_keyboard_device, &g_fd_keyboard);
   if (fd < 0)
     return -1;
   int n = write(fd, report, size);
-  close(fd);
   return (n == (int)size) ? 0 : -1;
 }
 typedef struct {
@@ -213,8 +242,9 @@ int find_hidg_devices() {
         // Extract the number
         if (sscanf(entry->d_name + prefix_len, "%d", &devices[count].number) ==
             1) {
-          strncpy(devices[count].name, entry->d_name, NAME_MAX - 1);
-          devices[count].name[NAME_MAX - 1] = '\0'; // Ensure null termination
+          snprintf(devices[count].name, NAME_MAX, "%s", entry->d_name);
+          // strncpy(devices[count].name, entry->d_name, NAME_MAX - 1);
+          // devices[count].name[NAME_MAX - 1] = '\0'; // Ensure null termination
           count++;
         }
       }
@@ -485,13 +515,12 @@ int send_keyboard_report(uint8_t modifiers, uint8_t key1, uint8_t key2,
   if (!g_keyboard_device)
     return -1;
 
-  int fd = open(g_keyboard_device, O_RDWR);
+  int fd = get_cached_fd(g_keyboard_device, &g_fd_keyboard);
   if (fd < 0)
     return -1;
 
   uint8_t report[8] = {modifiers, 0, key1, key2, key3, key4, key5, key6};
   int ret = write(fd, report, 8);
-  close(fd);
   return (ret == 8) ? 0 : -1;
 }
 
@@ -503,7 +532,7 @@ int send_consumer_key(const char *action) {
   if (usage == 0)
     return -1;
 
-  int fd = open(g_consumer_device, O_RDWR);
+  int fd = get_cached_fd(g_consumer_device, &g_fd_consumer);
   if (fd < 0)
     return -1;
 
@@ -512,7 +541,6 @@ int send_consumer_key(const char *action) {
   usleep(50000); // 50ms tap
   memset(report, 0, 2);
   write(fd, report, 2);
-  close(fd);
   return 0;
 }
 
@@ -526,7 +554,7 @@ int send_key_sequence(const char *modifiers_str, const char *sequence) {
     return send_consumer_key(sequence);
   }
 
-  int fd = open(g_keyboard_device, O_RDWR);
+  int fd = get_cached_fd(g_keyboard_device, &g_fd_keyboard);
   if (fd < 0)
     return -1;
 
@@ -541,7 +569,6 @@ int send_key_sequence(const char *modifiers_str, const char *sequence) {
   if (sequence == NULL || strlen(sequence) == 0) {
     /* Just send modifiers */
     write(fd, report, 8);
-    close(fd);
     return 0;
   }
 
@@ -588,7 +615,6 @@ int send_key_sequence(const char *modifiers_str, const char *sequence) {
     write(fd, report, 8);
   }
 
-  close(fd);
   return 0;
 }
 
@@ -677,7 +703,7 @@ int process_keyboard(int argc, char *argv[]) {
   }
 
   /* Open the HID keyboard device */
-  fd = open(g_keyboard_device, O_RDWR);
+  fd = get_cached_fd(g_keyboard_device, &g_fd_keyboard);
   if (fd < 0) {
     fprintf(stderr, "Error opening HID keyboard device (%s): %s\n",
             g_keyboard_device, strerror(errno));
@@ -694,7 +720,6 @@ int process_keyboard(int argc, char *argv[]) {
     if (write(fd, report, KEYBOARD_REPORT_SIZE) != KEYBOARD_REPORT_SIZE) {
       fprintf(stderr, "Error writing keyboard release report: %s\n",
               strerror(errno));
-      close(fd);
       return EXIT_FAILURE;
     }
   } else if (sequence != NULL) {
@@ -710,7 +735,6 @@ int process_keyboard(int argc, char *argv[]) {
       /* Send key press */
       if (write(fd, report, KEYBOARD_REPORT_SIZE) != KEYBOARD_REPORT_SIZE) {
         fprintf(stderr, "Error writing keyboard report: %s\n", strerror(errno));
-        close(fd);
         return EXIT_FAILURE;
       }
 
@@ -722,7 +746,6 @@ int process_keyboard(int argc, char *argv[]) {
         if (write(fd, report, KEYBOARD_REPORT_SIZE) != KEYBOARD_REPORT_SIZE) {
           fprintf(stderr, "Error writing keyboard release report: %s\n",
                   strerror(errno));
-          close(fd);
           return EXIT_FAILURE;
         }
       }
@@ -754,7 +777,6 @@ int process_keyboard(int argc, char *argv[]) {
           if (write(fd, report, KEYBOARD_REPORT_SIZE) != KEYBOARD_REPORT_SIZE) {
             fprintf(stderr, "Error writing keyboard report for '%c': %s\n", c,
                     strerror(errno));
-            close(fd);
             return EXIT_FAILURE;
           }
 
@@ -770,7 +792,6 @@ int process_keyboard(int argc, char *argv[]) {
               fprintf(stderr,
                       "Error writing keyboard release report for '%c': %s\n", c,
                       strerror(errno));
-              close(fd);
               return EXIT_FAILURE;
             }
 
@@ -795,7 +816,6 @@ int process_keyboard(int argc, char *argv[]) {
         if (write(fd, report, KEYBOARD_REPORT_SIZE) != KEYBOARD_REPORT_SIZE) {
           fprintf(stderr, "Error writing final keyboard release report: %s\n",
                   strerror(errno));
-          close(fd);
           return EXIT_FAILURE;
         }
       }
@@ -812,18 +832,15 @@ int process_keyboard(int argc, char *argv[]) {
     if (write(fd, report, KEYBOARD_REPORT_SIZE) != KEYBOARD_REPORT_SIZE) {
       fprintf(stderr, "Error writing modifier-only report: %s\n",
               strerror(errno));
-      close(fd);
       return EXIT_FAILURE;
     }
   } else {
     // No sequence, no --release, no modifiers specified
     fprintf(stderr, "Error: Keyboard command requires a sequence, --release, "
                     "or modifiers.\n");
-    close(fd);
     return EXIT_FAILURE;
   }
 
-  close(fd);
   return EXIT_SUCCESS;
 }
 
@@ -831,7 +848,7 @@ int process_keyboard(int argc, char *argv[]) {
 int send_mouse_move(int8_t x, int8_t y) {
   if (!g_mouse_device)
     return -1;
-  int fd = open(g_mouse_device, O_RDWR);
+  int fd = get_cached_fd(g_mouse_device, &g_fd_mouse);
   if (fd < 0)
     return -1;
 
@@ -840,7 +857,6 @@ int send_mouse_move(int8_t x, int8_t y) {
   report[2] = y;
 
   if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) {
-    close(fd);
     return -1;
   }
 
@@ -849,14 +865,13 @@ int send_mouse_move(int8_t x, int8_t y) {
   memset(report, 0, g_mouse_report_size);
   // write(fd, report, g_mouse_report_size);
 
-  close(fd);
   return 0;
 }
 
 int send_mouse_press(uint8_t button) {
   if (!g_mouse_device)
     return -1;
-  int fd = open(g_mouse_device, O_RDWR);
+  int fd = get_cached_fd(g_mouse_device, &g_fd_mouse);
   if (fd < 0)
     return -1;
 
@@ -864,26 +879,22 @@ int send_mouse_press(uint8_t button) {
   report[0] = button;
 
   if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) {
-    close(fd);
     return -1;
   }
-  close(fd);
   return 0;
 }
 
 int send_mouse_release() {
   if (!g_mouse_device)
     return -1;
-  int fd = open(g_mouse_device, O_RDWR);
+  int fd = get_cached_fd(g_mouse_device, &g_fd_mouse);
   if (fd < 0)
     return -1;
 
   uint8_t report[8] = {0};
   if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) {
-    close(fd);
     return -1;
   }
-  close(fd);
   return 0;
 }
 
@@ -918,7 +929,7 @@ int process_mouse(int argc, char *argv[]) {
   }
 
   /* Open the HID mouse device */
-  fd = open(g_mouse_device, O_RDWR);
+  fd = get_cached_fd(g_mouse_device, &g_fd_mouse);
   if (fd < 0) {
     fprintf(stderr, "Error opening HID mouse device (%s): %s\n", g_mouse_device,
             strerror(errno));
@@ -930,7 +941,6 @@ int process_mouse(int argc, char *argv[]) {
   if (strcmp(action, "move") == 0) {
     if (argc < 4) { // Need action + X + Y (argv[1], argv[2], argv[3])
       fprintf(stderr, "Error: move requires X Y parameters\n");
-      close(fd);
       return EXIT_FAILURE;
     }
 
@@ -946,7 +956,16 @@ int process_mouse(int argc, char *argv[]) {
                    ? 127
                    : ((y_val_long < -127) ? -127 : (int8_t)y_val_long);
 
-    close(fd); // Helper opens its own
+    // close(fd); // Helper opens its own, but we are in process_mouse which used to open manually.
+    // Actually send_mouse_move calls get_cached_fd too.
+    // If we are calling helper functions like send_mouse_move, we don't need to open FD here necessarily,
+    // BUT process_mouse does write() directly in "up" and "scroll" cases.
+    // Wait, "move" calls send_mouse_move. "click" calls send_mouse_click. "down" calls send_mouse_press.
+    // "up" does write() manually. "scroll" does write() manually.
+    // So for "move", "click", "down", we just call the helper.
+    // For "up", "scroll", we use `fd` obtained above.
+    // Since `get_cached_fd` returns the SAME fd, it works.
+
     if (send_mouse_move(x, y) != 0)
       return EXIT_FAILURE;
 
@@ -964,7 +983,6 @@ int process_mouse(int argc, char *argv[]) {
                 argv[2]);
       }
     }
-    close(fd);
     if (send_mouse_click(button) != 0)
       return EXIT_FAILURE;
 
@@ -976,7 +994,6 @@ int process_mouse(int argc, char *argv[]) {
       fprintf(stderr,
               "Warning: doubleclick does not take additional arguments.\n");
     }
-    close(fd);
     if (send_mouse_click(button) != 0)
       return EXIT_FAILURE;
     usleep(100000);
@@ -997,7 +1014,6 @@ int process_mouse(int argc, char *argv[]) {
                 argv[2]);
       }
     }
-    close(fd);
     if (send_mouse_press(button) != 0)
       return EXIT_FAILURE;
 
@@ -1009,14 +1025,12 @@ int process_mouse(int argc, char *argv[]) {
     if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) {
       fprintf(stderr, "Error writing mouse button release report: %s\n",
               strerror(errno));
-      close(fd);
       return EXIT_FAILURE;
     }
   } else if (strcmp(action, "scroll") == 0) {
     if (argc < 3) { // Need action + V [H] (argv[1], argv[2], [argv[3]])
       fprintf(stderr, "Error: scroll requires V [H] parameters (Vertical, "
                       "optional Horizontal)\n");
-      close(fd);
       return EXIT_FAILURE;
     }
 
@@ -1044,7 +1058,6 @@ int process_mouse(int argc, char *argv[]) {
     if (write(fd, report, g_mouse_report_size) != g_mouse_report_size) {
       fprintf(stderr, "Error writing mouse scroll report: %s\n",
               strerror(errno));
-      close(fd);
       return EXIT_FAILURE;
     }
     // Send a zero report immediately after scroll to stop it
@@ -1058,11 +1071,9 @@ int process_mouse(int argc, char *argv[]) {
 
   } else {
     fprintf(stderr, "Error: Unknown mouse action '%s'\n", action);
-    close(fd);
     return EXIT_FAILURE;
   }
 
-  close(fd);
   return EXIT_SUCCESS;
 }
 
@@ -1087,7 +1098,7 @@ int process_consumer(int argc, char *argv[]) {
   }
 
   /* Open the HID consumer device */
-  fd = open(g_consumer_device, O_RDWR);
+  fd = get_cached_fd(g_consumer_device, &g_fd_consumer);
   if (fd < 0) {
     fprintf(stderr, "Error opening HID consumer device (%s): %s\n",
             g_consumer_device, strerror(errno));
@@ -1099,7 +1110,6 @@ int process_consumer(int argc, char *argv[]) {
 
   if (usage == 0) {
     fprintf(stderr, "Error: Unknown consumer control action '%s'\n", action);
-    close(fd);
     return EXIT_FAILURE;
   }
 
@@ -1110,7 +1120,6 @@ int process_consumer(int argc, char *argv[]) {
   /* Send key press */
   if (write(fd, report, CONSUMER_REPORT_SIZE) != CONSUMER_REPORT_SIZE) {
     fprintf(stderr, "Error writing consumer report: %s\n", strerror(errno));
-    close(fd);
     return EXIT_FAILURE;
   }
 
@@ -1122,11 +1131,9 @@ int process_consumer(int argc, char *argv[]) {
   if (write(fd, report, CONSUMER_REPORT_SIZE) != CONSUMER_REPORT_SIZE) {
     fprintf(stderr, "Error writing consumer release report: %s\n",
             strerror(errno));
-    close(fd);
     return EXIT_FAILURE;
   }
 
-  close(fd);
   return EXIT_SUCCESS;
 }
 
@@ -1156,6 +1163,7 @@ int main(int argc, char *argv[]) {
 
   // Register cleanup function to free memory on exit
   atexit(cleanup_device_paths);
+  atexit(close_hid_fds);
 
   if (argc < 2) {
     print_usage(argv[0]); // Will exit
@@ -1331,7 +1339,7 @@ int send_mouse_report(uint8_t buttons, int8_t x, int8_t y, int8_t wheel,
                       int8_t hwheel) {
   if (!g_mouse_device)
     return -1;
-  int fd = open(g_mouse_device, O_RDWR);
+  int fd = get_cached_fd(g_mouse_device, &g_fd_mouse);
   if (fd < 0)
     return -1;
 
@@ -1346,6 +1354,5 @@ int send_mouse_report(uint8_t buttons, int8_t x, int8_t y, int8_t wheel,
   }
 
   int ret = write(fd, report, g_mouse_report_size);
-  close(fd);
   return (ret == g_mouse_report_size) ? 0 : -1;
 }
