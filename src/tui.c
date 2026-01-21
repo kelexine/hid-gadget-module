@@ -448,8 +448,8 @@ void render_keyboard() {
       int kh = 3;
 
       RenderKey *rk = &render_keys[render_key_count++];
-      strncpy(rk->label, key->label, sizeof(rk->label));
-      strncpy(rk->cmd, key->cmd, sizeof(rk->cmd));
+      snprintf(rk->label, sizeof(rk->label), "%s", key->label);
+      snprintf(rk->cmd, sizeof(rk->cmd), "%s", key->cmd);
       rk->x = kx;
       rk->y = ky;
       rk->w = kw;
@@ -519,15 +519,16 @@ void handle_input(const char *cmd) {
   }
 
   // Regular key
-  char mods_str[32] = {0};
+  char mods_str[64] = {0};
+  int pos = 0;
   if (active_mods & MOD_CTRL_LEFT)
-    strcat(mods_str, "CTRL-");
+    pos += snprintf(mods_str + pos, sizeof(mods_str) - pos, "CTRL-");
   if (active_mods & MOD_SHIFT_LEFT)
-    strcat(mods_str, "SHIFT-");
+    pos += snprintf(mods_str + pos, sizeof(mods_str) - pos, "SHIFT-");
   if (active_mods & MOD_ALT_LEFT)
-    strcat(mods_str, "ALT-");
+    pos += snprintf(mods_str + pos, sizeof(mods_str) - pos, "ALT-");
   if (active_mods & MOD_GUI_LEFT)
-    strcat(mods_str, "WIN-");
+    pos += snprintf(mods_str + pos, sizeof(mods_str) - pos, "WIN-");
 
   if (strlen(mods_str) > 0)
     mods_str[strlen(mods_str) - 1] = '\0';

@@ -119,9 +119,9 @@ void ducky_set_var(const char *name, const char *val) {
     if (g_var_count >= MAX_VARS)
       return;
     v = &g_vars[g_var_count++];
-    strncpy(v->name, name, MAX_VAR_NAME - 1);
+    snprintf(v->name, MAX_VAR_NAME, "%s", name);
   }
-  strncpy(v->value, val, MAX_VAR_VAL - 1);
+  snprintf(v->value, MAX_VAR_VAL, "%s", val);
 }
 
 static const char *get_system_var(const char *name) {
@@ -243,8 +243,8 @@ static int load_script(const char *filename, Script *s) {
     char *line = lskip(s->lines[i]);
     if (line[0] == ':') {
       if (g_label_count < MAX_LABELS) {
-        strncpy(g_labels[g_label_count].name, lskip(line + 1),
-                MAX_VAR_NAME - 1);
+        snprintf(g_labels[g_label_count].name, MAX_VAR_NAME, "%s",
+                 lskip(line + 1));
         rtrim(g_labels[g_label_count].name);
         g_labels[g_label_count].line = i;
         g_label_count++;
@@ -411,7 +411,7 @@ static int exec_line(Script *s, int pc) {
   // GOTO
   if (strncmp(line, "GOTO ", 5) == 0) {
     char label[MAX_VAR_NAME];
-    strncpy(label, lskip(line + 5), MAX_VAR_NAME - 1);
+    snprintf(label, MAX_VAR_NAME, "%s", lskip(line + 5));
     rtrim(label);
     for (int i = 0; i < g_label_count; i++)
       if (strcmp(g_labels[i].name, label) == 0)
