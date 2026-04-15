@@ -1,15 +1,37 @@
 #!/system/bin/sh
 # hid-setup - Configure USB HID gadget using standard Android paths
 # This script adds HID functions (keyboard, mouse, consumer) to the
-# standard Android gadget configuration (/config/usb_gadget/g1/configs/b.1).
+# standard Android gadget configuration (/config/usb_gadget/g1/configs/<N>.1).
+# It auto-detects the config subdirectory (b.1, c.1, etc.).
 # It uses hid.gs1, hid.gs2, hid.gs3 as function names.
 # It reads HID report descriptors from files in the module's /system/etc/hid directory.
+#
+# Author: kelexine <https://github.com/kelexine>
 
 set -e
 
 # Standard Android gadget paths
 GADGET_DIR="/config/usb_gadget/g1"
-CONFIG_DIR="${GADGET_DIR}/configs/b.1"
+
+# Auto-detect the configs subdirectory: prefer b.1, then c.1, then any *.1 that exists.
+# Different OEMs use different naming (Samsung often uses c.1, AOSP uses b.1).
+_detect_config_dir() {
+    for _cand in b.1 c.1; do
+        if [ -d "${GADGET_DIR}/configs/${_cand}" ]; then
+            echo "${GADGET_DIR}/configs/${_cand}"
+            return 0
+        fi
+    done
+    # Fallback: take the first *.1 directory that exists
+    for _d in "${GADGET_DIR}/configs/"*; do
+        if [ -d "$_d" ]; then
+            echo "$_d"
+            return 0
+        fi
+    done
+    return 1
+}
+CONFIG_DIR="${HID_CONFIG_DIR:-$(_detect_config_dir)}"
 
 # Function names (using hid.gsX convention)
 KEYBOARD_FUNC="hid.gs1"
@@ -17,9 +39,12 @@ MOUSE_FUNC="hid.gs2"
 CONSUMER_FUNC="hid.gs3"
 
 # Corresponding device nodes (overridable via environment for non-standard numbering)
-KEYBOARD_DEV="${HID_KEYBOARD_DEV:-/dev/hidg1}"
-MOUSE_DEV="${HID_MOUSE_DEV:-/dev/hidg2}"
-CONSUMER_DEV="${HID_CONSUMER_DEV:-/dev/hidg3}"
+# NOTE: The Linux HID gadget driver (f_hid.c) allocates device minor numbers via an
+# IDA starting at 0, regardless of the ConfigFS function name suffix (gs1/gs2/gs3).
+# hid.gs1 -> hidg0 (minor 0), hid.gs2 -> hidg1 (minor 1), hid.gs3 -> hidg2 (minor 2).
+KEYBOARD_DEV="${HID_KEYBOARD_DEV:-/dev/hidg0}"
+MOUSE_DEV="${HID_MOUSE_DEV:-/dev/hidg1}"
+CONSUMER_DEV="${HID_CONSUMER_DEV:-/dev/hidg2}"
 
 # Mouse report settings (support optional horizontal scroll -> 5-byte report)
 MOUSE_REPORT_LEN=4
@@ -36,13 +61,42 @@ if [ "${HID_MOUSE_HSCROLL:-0}" = "1" ] || [ "${HID_MOUSE_REPORT_SIZE:-}" = "5" ]
     MOUSE_REPORT_LEN=5
 fi
 
-# Corresponding device node major/minor numbers (assuming standard HID gadget major 243)
-# Minor numbers usually match the function index (0, 1, 2, ...)
-# Since we start functions at gs1, the minor numbers will be 1, 2, 3
-KEYBOARD_MINOR=1
-MOUSE_MINOR=2
-CONSUMER_MINOR=3
-HIDG_MAJOR=243 # Standard major number for hidg devices
+# Device node major/minor numbers.
+# Minors are 0-based: keyboard=0, mouse=1, consumer=2.
+# Major 243 is the standard hidg major; on some kernels it is dynamically
+# assigned -- we read it from sysfs after UDC bind to handle both cases.
+KEYBOARD_MINOR=0
+MOUSE_MINOR=1
+CONSUMER_MINOR=2
+HIDG_MAJOR=243 # Will be overridden from sysfs if available
+
+# --- Determine HID descriptor directory ---
+# MODPATH is only set during Magisk module installation. At runtime, use the
+# installed module path or the system path (when module overlays are active).
+if [ -z "$MODPATH" ]; then
+    # Runtime: try module install path first, then fall back to /system/etc/hid
+    HID_DESC_DIR="/data/adb/modules/hid-gadget/system/etc/hid"
+    if [ ! -d "$HID_DESC_DIR" ]; then
+        HID_DESC_DIR="/system/etc/hid"
+    fi
+else
+    # Installation time: use MODPATH
+    HID_DESC_DIR="${MODPATH}/system/etc/hid"
+fi
+
+if [ ! -d "$HID_DESC_DIR" ]; then
+    echo "Error: HID descriptor directory not found at '$HID_DESC_DIR'."
+    echo "Ensure the hid-gadget module is properly installed."
+    exit 1
+fi
+
+# Validate required descriptor files exist
+for _desc in keyboard-desc.bin mouse-desc.bin consumer-desc.bin; do
+    if [ ! -f "${HID_DESC_DIR}/${_desc}" ]; then
+        echo "Error: Missing HID descriptor file: ${HID_DESC_DIR}/${_desc}"
+        exit 1
+    fi
+done
 
 # --- Pre-checks ---
 echo "Checking for standard gadget paths..."
@@ -51,12 +105,13 @@ if [ ! -d "$GADGET_DIR" ]; then
     echo "Ensure your kernel is configured for USB Gadget support (CONFIG_USB_GADGET)."
     exit 1
 fi
-if [ ! -d "$CONFIG_DIR" ]; then
-    echo "Error: Standard gadget configuration directory '$CONFIG_DIR' not found."
-    echo "Ensure your system's USB gadget configuration is standard."
+if [ -z "$CONFIG_DIR" ] || [ ! -d "$CONFIG_DIR" ]; then
+    echo "Error: Could not find a gadget config directory under '${GADGET_DIR}/configs/'."
+    echo "Checked b.1 and c.1 -- neither exists. Your device may use a non-standard path."
+    echo "Override with: HID_CONFIG_DIR=/config/usb_gadget/g1/configs/<n> hid-setup"
     exit 1
 fi
-echo "Standard paths found."
+echo "Standard paths found (config: ${CONFIG_DIR})."
 
 # --- Cleanup existing functions/links (if they exist from a previous run) ---
 echo "Cleaning up previous HID function links and directories (if any)..."
@@ -89,7 +144,7 @@ echo 1 > "${GADGET_DIR}/functions/${KEYBOARD_FUNC}/protocol"  # Keyboard (Boot P
 echo 1 > "${GADGET_DIR}/functions/${KEYBOARD_FUNC}/subclass"  # Boot Interface Subclass
 echo 8 > "${GADGET_DIR}/functions/${KEYBOARD_FUNC}/report_length"
 # Read report descriptor from file
-cat "${MODPATH}/system/etc/hid/keyboard-desc.bin" > "${GADGET_DIR}/functions/${KEYBOARD_FUNC}/report_desc" || { echo "Error: Failed to write keyboard report_desc. Check file existence and SELinux."; exit 1; }
+cat "${HID_DESC_DIR}/keyboard-desc.bin" > "${GADGET_DIR}/functions/${KEYBOARD_FUNC}/report_desc" || { echo "Error: Failed to write keyboard report_desc. Check file existence and SELinux."; exit 1; }
 
 # Create mouse function
 echo "Creating mouse function ${MOUSE_FUNC}..."
@@ -102,7 +157,7 @@ if [ "$MOUSE_REPORT_LEN" = "5" ]; then
     # 5-byte mouse: buttons + X,Y,Wheel (Generic Desktop) + HWheel (Consumer AC Pan)
     printf '\x05\x01\x09\x02\xA1\x01\x09\x01\xA1\x00\x05\x09\x19\x01\x29\x03\x15\x00\x25\x01\x95\x03\x75\x01\x81\x02\x95\x01\x75\x05\x81\x03\x05\x01\x09\x30\x09\x31\x09\x38\x15\x81\x25\x7f\x75\x08\x95\x03\x81\x06\x05\x0C\x0A\x38\x02\x95\x01\x81\x06\xC0\xC0' > "${GADGET_DIR}/functions/${MOUSE_FUNC}/report_desc" || { echo "Error: Failed to write mouse report_desc (5-byte)."; exit 1; }
 else
-    cat "${MODPATH}/system/etc/hid/mouse-desc.bin" > "${GADGET_DIR}/functions/${MOUSE_FUNC}/report_desc" || { echo "Error: Failed to write mouse report_desc. Check file existence and SELinux."; exit 1; }
+    cat "${HID_DESC_DIR}/mouse-desc.bin" > "${GADGET_DIR}/functions/${MOUSE_FUNC}/report_desc" || { echo "Error: Failed to write mouse report_desc. Check file existence and SELinux."; exit 1; }
 fi
 
 # Create consumer control function
@@ -112,7 +167,7 @@ echo 0 > "${GADGET_DIR}/functions/${CONSUMER_FUNC}/protocol"  # None (Report Pro
 echo 0 > "${GADGET_DIR}/functions/${CONSUMER_FUNC}/subclass"  # None
 echo 2 > "${GADGET_DIR}/functions/${CONSUMER_FUNC}/report_length"
 # Read report descriptor from file
-cat "${MODPATH}/system/etc/hid/consumer-desc.bin" > "${GADGET_DIR}/functions/${CONSUMER_FUNC}/report_desc" || { echo "Error: Failed to write consumer report_desc. Check file existence and SELinux."; exit 1; }
+cat "${HID_DESC_DIR}/consumer-desc.bin" > "${GADGET_DIR}/functions/${CONSUMER_FUNC}/report_desc" || { echo "Error: Failed to write consumer report_desc. Check file existence and SELinux."; exit 1; }
 
 
 # --- Link functions to the standard configuration ---
@@ -167,10 +222,25 @@ echo "Gadget enabled."
 
 
 # --- Create device nodes ---
-# These should ideally be created by udev/devd based on kernel events,
-# but manual creation is sometimes necessary on Android.
+# The Linux HID gadget driver allocates device minor numbers via a global IDA
+# starting from 0. hid.gs1 -> minor 0 (hidg0), hid.gs2 -> minor 1 (hidg1), etc.
+# We try to read the actual major from sysfs for robustness.
+# Sysfs exposes hidg devices under /sys/class/hidg/hidgN/dev as "MAJOR:MINOR".
+_sysfs_major() {
+    _node="/sys/class/hidg/hidg${1}/dev"
+    if [ -f "$_node" ]; then
+        cut -d: -f1 < "$_node"
+    fi
+}
+
+_KMAJ=$(_sysfs_major 0)
+if [ -n "$_KMAJ" ]; then
+    HIDG_MAJOR="$_KMAJ"
+    echo "Detected hidg major from sysfs: ${HIDG_MAJOR}"
+fi
+
 echo "Creating device nodes ${KEYBOARD_DEV}, ${MOUSE_DEV}, ${CONSUMER_DEV}..."
-mkdir -p /dev || { echo "Warning: Could not create /dev directory? Permissions issue?"; } # Should usually exist
+mkdir -p /dev || { echo "Warning: Could not create /dev directory? Permissions issue?"; }
 mknod ${KEYBOARD_DEV} c ${HIDG_MAJOR} ${KEYBOARD_MINOR} 2>/dev/null || { echo "Warning: Could not create ${KEYBOARD_DEV}. May already exist or permissions issue. Check SELinux."; }
 mknod ${MOUSE_DEV} c ${HIDG_MAJOR} ${MOUSE_MINOR} 2>/dev/null || { echo "Warning: Could not create ${MOUSE_DEV}. May already exist or permissions issue. Check SELinux."; }
 mknod ${CONSUMER_DEV} c ${HIDG_MAJOR} ${CONSUMER_MINOR} 2>/dev/null || { echo "Warning: Could not create ${CONSUMER_DEV}. May already exist or permissions issue. Check SELinux."; }
