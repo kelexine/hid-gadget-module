@@ -3,5 +3,6 @@
 if ! /system/bin/hid-gadget consumer "$@"; then
     echo "HID Consumer failed, attempting auto-fix..."
     su -c "setprop sys.usb.config hid && /system/bin/hid-setup"
+    sleep 2  # Allow USB re-enumeration to complete before retrying
     exec /system/bin/hid-gadget consumer "$@"
 fi

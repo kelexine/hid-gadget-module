@@ -52,7 +52,7 @@ MOUSE_REPORT_LEN=4
 # Read module property if present (installed location)
 MOD_INST_PROP="/data/adb/modules/hid-gadget/module.prop"
 if [ -f "$MOD_INST_PROP" ]; then
-  if grep -qi '^mouse\.hscroll=\s*true' "$MOD_INST_PROP"; then
+  if grep -qi '^mouse.hscroll=[[:space:]]*true' "$MOD_INST_PROP"; then
     export HID_MOUSE_HSCROLL=1
   fi
 fi
@@ -220,6 +220,12 @@ if [ "$(cat "$GADGET_DIR/UDC")" != "$UDC_TO_ENABLE" ]; then
 fi
 echo "Gadget enabled."
 
+# Allow the kernel time to fully initialise the HID gadget functions and
+# populate /sys/class/hidg/ before we try to read the major number or open
+# any /dev/hidgX node. USB re-enumeration on the host side also starts here;
+# without this pause the very next write will return EINVAL.
+sleep 1
+
 
 # --- Create device nodes ---
 # The Linux HID gadget driver allocates device minor numbers via a global IDA
@@ -241,6 +247,12 @@ fi
 
 echo "Creating device nodes ${KEYBOARD_DEV}, ${MOUSE_DEV}, ${CONSUMER_DEV}..."
 mkdir -p /dev || { echo "Warning: Could not create /dev directory? Permissions issue?"; }
+# Remove any stale nodes from a previous gadget setup. If mknod silently fails
+# (node already exists), the old node may point to an obsolete major:minor --
+# every subsequent write will return EINVAL.
+rm -f ${KEYBOARD_DEV} 2>/dev/null || true
+rm -f ${MOUSE_DEV}    2>/dev/null || true
+rm -f ${CONSUMER_DEV} 2>/dev/null || true
 mknod ${KEYBOARD_DEV} c ${HIDG_MAJOR} ${KEYBOARD_MINOR} 2>/dev/null || { echo "Warning: Could not create ${KEYBOARD_DEV}. May already exist or permissions issue. Check SELinux."; }
 mknod ${MOUSE_DEV} c ${HIDG_MAJOR} ${MOUSE_MINOR} 2>/dev/null || { echo "Warning: Could not create ${MOUSE_DEV}. May already exist or permissions issue. Check SELinux."; }
 mknod ${CONSUMER_DEV} c ${HIDG_MAJOR} ${CONSUMER_MINOR} 2>/dev/null || { echo "Warning: Could not create ${CONSUMER_DEV}. May already exist or permissions issue. Check SELinux."; }
