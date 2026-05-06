@@ -74,6 +74,7 @@ void close_hid_fds() {
 /* Mouse report descriptor */
 #ifdef MOCK_HID
 static int mock_write(int fd, const void *buf, size_t count) {
+  (void)fd;
   const uint8_t *report = (const uint8_t *)buf;
   printf("[HID-MOCK] Writing %zu bytes: ", count);
   for (size_t i = 0; i < count; i++) {
@@ -242,9 +243,8 @@ int find_hidg_devices() {
         // Extract the number
         if (sscanf(entry->d_name + prefix_len, "%d", &devices[count].number) ==
             1) {
-          snprintf(devices[count].name, NAME_MAX, "%s", entry->d_name);
-          // strncpy(devices[count].name, entry->d_name, NAME_MAX - 1);
-          // devices[count].name[NAME_MAX - 1] = '\0'; // Ensure null termination
+          snprintf(devices[count].name, sizeof(devices[count].name), "%.*s",
+                   (int)sizeof(devices[count].name) - 1, entry->d_name);
           count++;
         }
       }

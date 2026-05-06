@@ -42,7 +42,6 @@ mock-static: $(SRC)
 
 clean:
 	rm -f $(TARGET) $(MOCK_TARGET) *-static
-	rm -rf ./blobs/*
 
 test:
 	python3 tests/run_tests.py

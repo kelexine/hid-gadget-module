@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-v1.38.1-blue?style=for-the-badge&logo=android)
+![Version](https://img.shields.io/badge/version-v1.38.2-blue?style=for-the-badge&logo=android)
 ![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)
 ![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Linux-orange?style=for-the-badge)
 ![Architecture](https://img.shields.io/badge/arch-ARM64%20%7C%20ARM%20%7C%20x86__64%20%7C%20x86-purple?style=for-the-badge)
@@ -40,7 +40,7 @@ The star of the show (`hid-tui`). A fully-featured GUI running inside your termi
 
 ## 📥 Installation (Android)
 
-1.  Download the latest `hid-gadget-module-v1.38.1.zip`.
+1.  Download the latest `hid-gadget-module-v1.38.2.zip`.
 2.  Open **Magisk** or **KernelSU** > **Modules** > **Install from Storage**.
 3.  Select the zip file and reboot.
 
@@ -127,7 +127,7 @@ cd hid-gadget-module
 # Build artifacts and create zip
 ./scripts/build_release.sh auto
 ```
-This will create `hid-gadget-module-v1.38.1.zip` for all 4 architectures (`arm64`, `arm`, `x86_64`, `x86`).
+This will create `hid-gadget-module-v1.38.2.zip` for all 4 architectures (`arm64`, `arm`, `x86_64`, `x86`).
 
 ---
 
