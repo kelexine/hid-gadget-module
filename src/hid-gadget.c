@@ -119,7 +119,7 @@ static const uint8_t usage_table_us[128] = {
     0,  0,  0,  41,
     0,  0,  0,  0, /* 24-31 (Escape) */
     44, 30, 52, 32,
-    33, 34, 35, 52, /* 32-39 (Space, !, ", #, $, %, &, ') */
+    33, 34, 36, 52, /* 32-39 (Space, !, ", #, $, %, &, ') */
     38, 39, 37, 46,
     54, 45, 55, 56, /* 40-47 ((, ), *, +, ,, -, ., /) */
     39, 30, 31, 32,
@@ -133,7 +133,7 @@ static const uint8_t usage_table_us[128] = {
     19, 20, 21, 22,
     23, 24, 25, 26, /* 80-87 (P-W) */
     27, 28, 29, 47,
-    49, 48, 33, 38, /* 88-95 (X-Z,[,\|],^ (Shift+6)) - Adjusted */
+    49, 48, 35, 45, /* 88-95 (X-Z,[,\|],^ (Shift+6), _) - Adjusted */
     53, 4,  5,  6,
     7,  8,  9,  10, /* 96-103 (`,a-g) */
     11, 12, 13, 14,
@@ -577,6 +577,7 @@ int send_key_sequence(const char *modifiers_str, const char *sequence) {
   if (fn_usage != 0) {
     report[2] = fn_usage;
     write(fd, report, 8);
+    usleep(10000);
     /* Release if it's a one-shot */
     report[2] = 0;
     write(fd, report, 8);
@@ -599,6 +600,7 @@ int send_key_sequence(const char *modifiers_str, const char *sequence) {
         report[0] = current_mods;
         report[2] = usage;
         write(fd, report, 8);
+        usleep(10000);
 
         /* Release */
         report[0] = modifiers;
@@ -610,6 +612,7 @@ int send_key_sequence(const char *modifiers_str, const char *sequence) {
 
   /* Final release if modifiers were used and it's not a holding operation */
   if (modifiers != 0) {
+    usleep(10000);
     report[0] = 0;
     report[2] = 0;
     write(fd, report, 8);
@@ -740,6 +743,7 @@ int process_keyboard(int argc, char *argv[]) {
 
       /* If not holding, send key release */
       if (!hold_keys) {
+        usleep(10000);
         /* Clear key presses but keep explicit modifiers */
         memset(&report[2], 0, KEYBOARD_REPORT_SIZE - 2);
         // report[0] = modifiers; // Already set
@@ -782,6 +786,7 @@ int process_keyboard(int argc, char *argv[]) {
 
           /* Send key release if not holding */
           if (!hold_keys) {
+            usleep(10000);
             /* Clear key press */
             report[2] = 0;
             /* Restore original explicit modifiers for the release report */
@@ -1278,14 +1283,15 @@ uint8_t get_key_code(const char *name) {
 }
 
 int hold_key(const char *key_name) {
-  if (strcasecmp(key_name, "CTRL") == 0)
+  if (strcasecmp(key_name, "CTRL") == 0 || strcasecmp(key_name, "CONTROL") == 0)
     g_held_mods |= (MOD_CTRL_LEFT);
   else if (strcasecmp(key_name, "SHIFT") == 0)
     g_held_mods |= (MOD_SHIFT_LEFT);
-  else if (strcasecmp(key_name, "ALT") == 0)
+  else if (strcasecmp(key_name, "ALT") == 0 || strcasecmp(key_name, "OPTION") == 0)
     g_held_mods |= (MOD_ALT_LEFT);
   else if (strcasecmp(key_name, "GUI") == 0 ||
-           strcasecmp(key_name, "WINDOWS") == 0)
+           strcasecmp(key_name, "WINDOWS") == 0 ||
+           strcasecmp(key_name, "COMMAND") == 0)
     g_held_mods |= (MOD_GUI_LEFT);
   else {
     uint8_t code = get_key_code(key_name);
@@ -1303,13 +1309,15 @@ int hold_key(const char *key_name) {
 }
 
 int release_key(const char *key_name) {
-  if (strcasecmp(key_name, "CTRL") == 0)
+  if (strcasecmp(key_name, "CTRL") == 0 || strcasecmp(key_name, "CONTROL") == 0)
     g_held_mods &= ~(MOD_CTRL_LEFT);
   else if (strcasecmp(key_name, "SHIFT") == 0)
     g_held_mods &= ~(MOD_SHIFT_LEFT);
-  else if (strcasecmp(key_name, "ALT") == 0)
+  else if (strcasecmp(key_name, "ALT") == 0 || strcasecmp(key_name, "OPTION") == 0)
     g_held_mods &= ~(MOD_ALT_LEFT);
-  else if (strcasecmp(key_name, "GUI") == 0)
+  else if (strcasecmp(key_name, "GUI") == 0 ||
+           strcasecmp(key_name, "WINDOWS") == 0 ||
+           strcasecmp(key_name, "COMMAND") == 0)
     g_held_mods &= ~(MOD_GUI_LEFT);
   else {
     uint8_t code = get_key_code(key_name);
