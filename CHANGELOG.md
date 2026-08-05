@@ -1,5 +1,13 @@
 # Changelog
 
+## [v1.38.3] - 2026-08-05
+### Changed
+- **Code Quality**: Deduplicated the character→HID-usage-code lookup logic that was copy-pasted in `send_key_sequence()` and `process_keyboard()` into a single shared `char_to_hid_usage()` helper. No behavioral change.
+### Documentation
+- **Known Limitations**: Documented that `hid-keyboard`/DuckyScript `STRING` only support the US-layout ASCII character set; multi-byte UTF-8 input is silently dropped (not garbled) rather than mistyped. Closes #14.
+### Tests
+- Added `tests/cases/08_utf8_dropped` regression case locking in the documented UTF-8 drop behavior.
+
 ## [v1.38.2] - 2026-01-20
 ### Added
 - **hid-ducky wrapper**: Added a new shorthand wrapper for executing DuckyScripts with automatic recovery support.
