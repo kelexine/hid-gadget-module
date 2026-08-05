@@ -1,0 +1,7 @@
+REM Regression test for issue #14: non-ASCII/UTF-8 bytes are silently
+REM dropped rather than sent as garbage keycodes. "ı" (U+0131, Turkish
+REM dotless i) encodes as the two UTF-8 bytes 0xC4 0xB1; neither byte is
+REM < 128 so char_to_hid_usage() maps both to usage 0 and no report is
+REM emitted for them. The surrounding ASCII characters must still be
+REM typed normally.
+STRING aıb

@@ -111,6 +111,13 @@ While this module implements the **100% Core Specification**, there are some pla
 - **USB Conflicts**: Enabling the HID gadget may temporarily disconnect other USB functions like ADB or MTP on some devices, depending on how your specific kernel handles USB compositions.
 - **OTG Requirement**: You must use a high-quality USB-C to USB-A (or equivalent) cable. Some "charging-only" cables lack the necessary data lines for HID communication.
 
+### ⌨️ **Character Set (English / Latin / ASCII only)**
+`hid-keyboard`, `send_key_sequence`, and DuckyScript `STRING`/`STRINGLN` only support the **US keyboard layout's 7-bit ASCII range** — the same characters a physical US keyboard can emit directly (`a-z`, `A-Z`, `0-9`, and standard US punctuation/symbols).
+- **Multi-byte UTF-8 input is not decoded.** Text is walked one raw byte at a time. Any byte ≥ 128 (i.e. every byte of a multi-byte UTF-8 codepoint, such as accented Latin letters or non-Latin scripts) has no entry in the keycode table and is **silently dropped** from the typed output — it is not mistyped or garbled, it's simply skipped.
+- **No dead-key / AltGr / non-US layout support** exists yet, so there's no way to reach characters like `ı ğ ş ç ö ü` (Turkish), other accented letters, or non-Latin scripts as-is.
+- **Workaround**: transliterate non-ASCII text to its closest ASCII equivalent before calling `hid-keyboard` (e.g. `ı→i`, `ğ→g`, `ş→s`, `ç→c`, `ö→o`, `ü→u`).
+- **Contributing**: proper Unicode support (UTF-8 decoding + configurable per-locale/dead-key tables) is a welcome addition — see [issue #14](https://github.com/kelexine/hid-gadget-module/issues/14) for a scoped starting point. Quality PRs adding this are very welcome.
+
 ---
 
 ## 🏗️ Building From Source

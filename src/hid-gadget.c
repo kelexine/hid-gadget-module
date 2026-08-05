@@ -544,6 +544,57 @@ int send_consumer_key(const char *action) {
   return 0;
 }
 
+/*
+ * Resolve a single character to its HID usage code and the modifier byte
+ * required to produce it (e.g. adds SHIFT for uppercase/punctuation).
+ *
+ * Character support: US-layout ASCII only (7-bit, values 0-127). This
+ * mirrors `usage_table_us`/`shift_chars_us`, which only cover the Basic
+ * Latin range - the same range a physical US keyboard can emit directly.
+ * Author: kelexine <https://github.com/kelexine>
+ *
+ * IMPORTANT - UTF-8 / non-ASCII input:
+ * `sequence` is walked one `char` (byte) at a time by both callers of this
+ * function. A multi-byte UTF-8 codepoint (e.g. Turkish "ı" = 0xC4 0xB1)
+ * arrives here as two separate bytes, each >= 128. Bytes >= 128 fail the
+ * `< 128` guard below and resolve to usage 0, so the caller treats them as
+ * "no key for this byte" and silently skips them - the character is
+ * dropped from the typed output rather than being sent incorrectly.
+ * This is a known, documented limitation (see README "Known Limitations"
+ * and https://github.com/kelexine/hid-gadget-module/issues/14) and not a
+ * bug in this function: proper Unicode input requires either a per-locale
+ * dead-key/AltGr table or a transliteration layer, neither of which exists
+ * yet. Pre-transliterate non-Latin text to ASCII before calling
+ * hid-keyboard/send_key_sequence/DuckyScript STRING until that lands.
+ *
+ * base_modifiers: explicit modifiers already requested by the caller
+ *                 (e.g. from --shift/--ctrl flags); ORed with SHIFT here
+ *                 if the character itself requires it.
+ * out_modifiers:  optional; receives the final modifier byte to send.
+ *
+ * Returns the HID usage code, or 0 if the character has no mapping
+ * (including all non-ASCII bytes, per the above).
+ */
+static uint8_t char_to_hid_usage(char c, uint8_t base_modifiers,
+                                  uint8_t *out_modifiers) {
+  uint8_t usage = 0;
+  uint8_t mods = base_modifiers;
+
+  if ((unsigned char)c < 128) {
+    usage = (current_usage_table ? current_usage_table
+                                 : usage_table_us)[(unsigned char)c];
+    if (usage != 0 &&
+        strchr(current_shift_chars ? current_shift_chars : shift_chars_us,
+               c)) {
+      mods |= MOD_SHIFT_LEFT;
+    }
+  }
+
+  if (out_modifiers)
+    *out_modifiers = mods;
+  return usage;
+}
+
 /* Reusable function to send a key sequence with optional modifiers */
 int send_key_sequence(const char *modifiers_str, const char *sequence) {
   if (!g_keyboard_device)
@@ -585,18 +636,10 @@ int send_key_sequence(const char *modifiers_str, const char *sequence) {
     /* Regular text */
     for (size_t i = 0; i < strlen(sequence); i++) {
       char c = sequence[i];
-      uint8_t usage = 0;
-      uint8_t current_mods = modifiers;
-
-      if ((unsigned char)c < 128)
-        usage = (current_usage_table ? current_usage_table
-                                     : usage_table_us)[(unsigned char)c];
+      uint8_t current_mods;
+      uint8_t usage = char_to_hid_usage(c, modifiers, &current_mods);
 
       if (usage != 0) {
-        if (strchr(current_shift_chars ? current_shift_chars : shift_chars_us,
-                   c))
-          current_mods |= MOD_SHIFT_LEFT;
-
         report[0] = current_mods;
         report[2] = usage;
         write(fd, report, 8);
@@ -757,22 +800,10 @@ int process_keyboard(int argc, char *argv[]) {
       /* Regular keys */
       for (i = 0; i < seq_len; i++) {
         char c = sequence[i];
-        uint8_t usage = 0;
-        uint8_t current_modifiers = modifiers; // Start with explicit modifiers
-
-        /* Get usage code */
-        if ((unsigned char)c < 128) {
-          usage = (current_usage_table ? current_usage_table
-                                       : usage_table_us)[(unsigned char)c];
-        }
+        uint8_t current_modifiers;
+        uint8_t usage = char_to_hid_usage(c, modifiers, &current_modifiers);
 
         if (usage != 0) {
-          /* Add shift modifier if needed */
-          if (strchr(current_shift_chars ? current_shift_chars : shift_chars_us,
-                     c)) {
-            current_modifiers |= MOD_SHIFT_LEFT;
-          }
-
           /* Set modifiers and key in report */
           report[0] = current_modifiers;
           report[2] = usage;
