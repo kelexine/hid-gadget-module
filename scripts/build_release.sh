@@ -92,13 +92,17 @@ echo ">> Building static binaries with Make..."
 make clean
 make static
 
+# 6b. Build WebUI (outputs to ../webroot, picked up by the zip step below)
+echo ">> Building WebUI..."
+( cd webui && npm install --no-fund --no-audit && npm run build )
+
 # 7. Zip
 echo ">> Zipping module..."
 ZIP_NAME="hid-gadget-module-$TARGET_VER.zip"
 # Exclude source hierarchy from zip if it's meant for Magisk? 
 # Usually, we want to include them for reference or keep it lean.
 # The previous zip logic included EVERYTHING.
-zip -r "$ZIP_NAME" . -x ".*" "blobs/orig/*" "*.zip" "scripts/*" "tests/*" "src/*" "include/*" "Makefile"
+zip -r "$ZIP_NAME" . -x ".*" "blobs/orig/*" "*.zip" "scripts/*" "tests/*" "src/*" "include/*" "Makefile" "webui/*"
 # Actually, let's keep the zip structure as it was but with organized binaries
 # Wait, the zip previously included ducky.c etc.
 # Magisk doesn't use them, but it's fine.

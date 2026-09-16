@@ -125,9 +125,11 @@ set_perm "$MODPATH/system/bin/hid-consumer" 0 2000 0755 || print_error_and_exit 
 set_perm "$MODPATH/system/bin/hid-tui"      0 2000 0755 || print_error_and_exit "Failed setting permissions for hid-tui."
 set_perm "$MODPATH/system/bin/hid-ducky"    0 2000 0755 || print_error_and_exit "Failed setting permissions for hid-ducky."
 set_perm "$MODPATH/system/bin/hid-setup"    0 2000 0755 || print_error_and_exit "Failed setting permissions for hid-setup."
+set_perm "$MODPATH/system/bin/hid-modpath.sh" 0 2000 0644 || print_error_and_exit "Failed setting permissions for hid-modpath.sh."
 # Set permissions for the init script
 set_perm "$MODPATH/system/etc/init/init.hidgadget.rc" 0 0 0644 || print_error_and_exit "Failed setting permissions for init.hidgadget.rc."
 set_perm "$MODPATH/service.sh" 0 0 0755 || print_error_and_exit "Failed setting permissions for service.sh."
+set_perm "$MODPATH/action.sh" 0 0 0755 || print_error_and_exit "Failed setting permissions for action.sh."
 
 print_success "Executable and specific permissions set."
 # Set permissions for descriptor files

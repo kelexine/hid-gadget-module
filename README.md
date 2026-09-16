@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-v1.38.2-blue?style=for-the-badge&logo=android)
+![Version](https://img.shields.io/badge/version-v1.38.4-blue?style=for-the-badge&logo=android)
 ![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)
 ![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Linux-orange?style=for-the-badge)
 ![Architecture](https://img.shields.io/badge/arch-ARM64%20%7C%20ARM%20%7C%20x86__64%20%7C%20x86-purple?style=for-the-badge)
@@ -28,6 +28,11 @@ The star of the show (`hid-tui`). A fully-featured GUI running inside your termi
 - **⌨️ Laptop-Style Keyboard**: Full 75% layout with clickable keys and visual press feedback.
 - **🖱️ "Radar" Analog Mouse**: Virtual analog stick with aspect-ratio corrected movement and "Velocity Tap" precision. Magnitude = Speed.
 - **🤏 Drag & Drop**: Dedicated `[HL]`, `[HM]`, `[HR]` buttons to latch clicks for dragging. (Turns Magenta when locked).
+
+### 🌐 **Native MySU WebUI**
+On [MySU](https://github.com/kelexine/mysu), tap the module's Action button to launch a Material 3
+control panel directly from MySU Manager — keyboard, mouse, media, and DuckyScript, no terminal
+required. Falls back to `hid-tui` on managers without a WebUI host. Source in `webui/`.
 - **🎮 Media Deck**: Full 14-key remote control (`PLAY`, `VOL`, `MUTE`, `BRIGHTNESS`...).
 - **🌈 Visual Feedback**: Keys flash and buttons light up when pressed.
 

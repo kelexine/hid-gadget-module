@@ -1,2 +1,6 @@
 *.zip
 
+# WebUI build artifacts / dependencies (rebuilt by scripts/build_release.sh)
+webui/node_modules/
+webroot/
+

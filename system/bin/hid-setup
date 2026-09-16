@@ -49,9 +49,14 @@ CONSUMER_DEV="${HID_CONSUMER_DEV:-/dev/hidg2}"
 # Mouse report settings (support optional horizontal scroll -> 5-byte report)
 MOUSE_REPORT_LEN=4
 
+# Locate the installed module dir (MySU-native path first, legacy
+# Magisk/KernelSU path second). See hid-modpath.sh for the resolver.
+. /system/bin/hid-modpath.sh 2>/dev/null || true
+_MOD_INST_DIR=$(resolve_module_dir 2>/dev/null || true)
+
 # Read module property if present (installed location)
-MOD_INST_PROP="/data/adb/modules/hid-gadget/module.prop"
-if [ -f "$MOD_INST_PROP" ]; then
+MOD_INST_PROP="${_MOD_INST_DIR}/module.prop"
+if [ -n "$_MOD_INST_DIR" ] && [ -f "$MOD_INST_PROP" ]; then
   if grep -qi '^mouse.hscroll=[[:space:]]*true' "$MOD_INST_PROP"; then
     export HID_MOUSE_HSCROLL=1
   fi
@@ -74,9 +79,10 @@ HIDG_MAJOR=243 # Will be overridden from sysfs if available
 # MODPATH is only set during Magisk module installation. At runtime, use the
 # installed module path or the system path (when module overlays are active).
 if [ -z "$MODPATH" ]; then
-    # Runtime: try module install path first, then fall back to /system/etc/hid
-    HID_DESC_DIR="/data/adb/modules/hid-gadget/system/etc/hid"
-    if [ ! -d "$HID_DESC_DIR" ]; then
+    # Runtime: try the resolved module install path first, then fall
+    # back to /system/etc/hid (module overlay may already be mounted there).
+    HID_DESC_DIR="${_MOD_INST_DIR:+${_MOD_INST_DIR}/system/etc/hid}"
+    if [ -z "$HID_DESC_DIR" ] || [ ! -d "$HID_DESC_DIR" ]; then
         HID_DESC_DIR="/system/etc/hid"
     fi
 else

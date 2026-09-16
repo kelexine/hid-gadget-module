@@ -1,0 +1,113 @@
+/* HID Gadget WebUI styles
+ * Author: kelexine <https://github.com/kelexine>
+ */
+:root {
+    --bg: #fef7ff;
+    --fg: #1d1b20;
+    --surface: #f3edf7;
+    --outline: #79747e;
+    --accent: #6750a4;
+    --accent-on: #ffffff;
+    --danger: #b3261e;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #141218;
+        --fg: #e6e0e9;
+        --surface: #211f26;
+        --outline: #938f99;
+        --accent: #d0bcff;
+        --accent-on: #381e72;
+    }
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: 'Roboto', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    padding-bottom: 2rem;
+}
+
+.header {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.material-title { font-size: 1.4rem; font-weight: 500; }
+.material-subtitle { font-size: 0.8rem; color: var(--outline); }
+
+main { padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
+
+.panel { display: flex; flex-direction: column; gap: 0.75rem; }
+.panel.hidden { display: none; }
+
+md-outlined-text-field, md-outlined-select { width: 100%; }
+
+.chip-row, .btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+.mod-chip, .key-btn, .action-btn {
+    border: 1px solid var(--outline);
+    background: var(--surface);
+    color: var(--fg);
+    border-radius: 999px;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.mod-chip.active {
+    background: var(--accent);
+    color: var(--accent-on);
+    border-color: var(--accent);
+}
+
+.key-grid, .btn-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+}
+
+.mouse-pad {
+    height: 220px;
+    border-radius: 16px;
+    background: var(--surface);
+    border: 1px solid var(--outline);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: none;
+    user-select: none;
+}
+
+.pad-hint { color: var(--outline); font-size: 0.85rem; }
+
+.log-box {
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 40vh;
+    overflow-y: auto;
+    font-size: 0.8rem;
+}
+
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: 1.5rem;
+    transform: translateX(-50%);
+    background: var(--fg);
+    color: var(--bg);
+    padding: 0.6rem 1rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    z-index: 1000;
+}
+.toast.hidden { display: none; }

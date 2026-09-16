@@ -1,0 +1,106 @@
+<!--
+  HID Gadget WebUI - MySU native control panel
+  Author: kelexine <https://github.com/kelexine>
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>HID Gadget</title>
+    <link rel="stylesheet" href="./index.css" type="text/css">
+    <script type="module" crossorigin src="./index.js"></script>
+</head>
+<body>
+    <div class="header blur-box">
+        <span class="material-title">HID Gadget</span>
+        <span class="material-subtitle" id="module-version">--</span>
+    </div>
+
+    <md-tabs id="tabs">
+        <md-primary-tab id="tab-keyboard">Keyboard</md-primary-tab>
+        <md-primary-tab id="tab-mouse">Mouse</md-primary-tab>
+        <md-primary-tab id="tab-consumer">Media</md-primary-tab>
+        <md-primary-tab id="tab-ducky">Ducky</md-primary-tab>
+        <md-primary-tab id="tab-status">Status</md-primary-tab>
+    </md-tabs>
+
+    <main>
+        <!-- Keyboard panel -->
+        <section id="panel-keyboard" class="panel">
+            <md-outlined-text-field id="kb-text" label="Text to type" type="textarea" rows="3"></md-outlined-text-field>
+            <md-filled-button id="kb-send">Send Text</md-filled-button>
+
+            <div class="chip-row" id="kb-modifiers">
+                <button class="mod-chip" data-mod="CTRL">CTRL</button>
+                <button class="mod-chip" data-mod="ALT">ALT</button>
+                <button class="mod-chip" data-mod="SHIFT">SHIFT</button>
+                <button class="mod-chip" data-mod="GUI">GUI</button>
+            </div>
+
+            <div class="key-grid" id="kb-keys">
+                <button class="key-btn" data-key="ESC">ESC</button>
+                <button class="key-btn" data-key="TAB">TAB</button>
+                <button class="key-btn" data-key="ENTER">ENTER</button>
+                <button class="key-btn" data-key="SPACE">SPACE</button>
+                <button class="key-btn" data-key="UP">&#8593;</button>
+                <button class="key-btn" data-key="DOWN">&#8595;</button>
+                <button class="key-btn" data-key="LEFT">&#8592;</button>
+                <button class="key-btn" data-key="RIGHT">&#8594;</button>
+                <button class="key-btn" data-key="DEL">DEL</button>
+                <button class="key-btn" data-key="F1">F1</button>
+                <button class="key-btn" data-key="F2">F2</button>
+                <button class="key-btn" data-key="F3">F3</button>
+            </div>
+        </section>
+
+        <!-- Mouse panel -->
+        <section id="panel-mouse" class="panel hidden">
+            <div class="mouse-pad" id="mouse-pad">
+                <span class="pad-hint">Drag to move pointer</span>
+            </div>
+            <div class="btn-row">
+                <md-filled-button data-click="left">Left Click</md-filled-button>
+                <md-filled-button data-click="middle">Middle</md-filled-button>
+                <md-filled-button data-click="right">Right Click</md-filled-button>
+            </div>
+            <div class="btn-row">
+                <md-outlined-button id="scroll-up">Scroll Up</md-outlined-button>
+                <md-outlined-button id="scroll-down">Scroll Down</md-outlined-button>
+            </div>
+        </section>
+
+        <!-- Consumer / media panel -->
+        <section id="panel-consumer" class="panel hidden">
+            <div class="btn-grid" id="consumer-actions">
+                <button class="action-btn" data-action="PLAY">Play/Pause</button>
+                <button class="action-btn" data-action="MUTE">Mute</button>
+                <button class="action-btn" data-action="VOL+">Vol +</button>
+                <button class="action-btn" data-action="VOL-">Vol -</button>
+                <button class="action-btn" data-action="BRIGHTNESS+">Bright +</button>
+                <button class="action-btn" data-action="BRIGHTNESS-">Bright -</button>
+            </div>
+        </section>
+
+        <!-- DuckyScript panel -->
+        <section id="panel-ducky" class="panel hidden">
+            <md-outlined-select id="ducky-os" label="Target OS">
+                <md-select-option value="WINDOWS" selected><div slot="headline">Windows</div></md-select-option>
+                <md-select-option value="MACOS"><div slot="headline">macOS</div></md-select-option>
+                <md-select-option value="LINUX"><div slot="headline">Linux</div></md-select-option>
+                <md-select-option value="ANDROID"><div slot="headline">Android</div></md-select-option>
+            </md-outlined-select>
+            <md-outlined-text-field id="ducky-script" label="DuckyScript 3.0" type="textarea" rows="10"></md-outlined-text-field>
+            <md-filled-button id="ducky-run">Run Script</md-filled-button>
+        </section>
+
+        <!-- Status panel -->
+        <section id="panel-status" class="panel hidden">
+            <md-filled-button id="status-resetup">Re-run HID Setup</md-filled-button>
+            <pre id="status-log" class="log-box">Ready.</pre>
+        </section>
+    </main>
+
+    <div id="toast" class="toast hidden"></div>
+</body>
+</html>

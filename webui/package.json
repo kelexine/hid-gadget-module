@@ -1,0 +1,24 @@
+{
+  "name": "hid-gadget-webui",
+  "version": "1.0.0",
+  "description": "MySU WebUI control panel for hid-gadget",
+  "author": "kelexine <https://github.com/kelexine>",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build --emptyOutDir",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@material/web": "^2.5.0",
+    "@mysu-org/mysu": "^3.0.2",
+    "webuix": "^0.0.19"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "globals": "^17.12.0",
+    "vite": "^8.2.2"
+  },
+  "packageManager": "pnpm@11.22.0"
+}
