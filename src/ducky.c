@@ -10,6 +10,9 @@
 
 #define MAX_LINE_LEN 1024
 #define MAX_LINES 2048
+#define MAX_MACROS 128
+#define MAX_MACRO_NAME 128
+#define MAX_MACRO_VAL 1024
 #define MAX_VARS 128
 #define MAX_VAR_NAME 64
 #define MAX_VAR_VAL 256
@@ -37,8 +40,11 @@ typedef struct {
 typedef struct {
   char **lines;
   int count;
+  int type_string;
 } Script;
 
+static Variable g_macros[MAX_MACROS];
+static int g_macros_count = 0;
 static Variable g_vars[MAX_VARS];
 static int g_var_count = 0;
 static Function g_functions[MAX_FUNCTIONS];
@@ -105,12 +111,31 @@ static char *lskip(const char *s) {
   return (char *)s;
 }
 
+static Variable *find_macro(const char *name) {
+  for (int i = 0; i < g_macros_count; i++) {
+    if (strcmp(g_macros[i].name, name) == 0)
+      return &g_macros[i];
+  }
+  return NULL;
+}
+
 static Variable *find_var(const char *name) {
   for (int i = 0; i < g_var_count; i++) {
     if (strcmp(g_vars[i].name, name) == 0)
       return &g_vars[i];
   }
   return NULL;
+}
+
+void ducky_set_macro(const char *name, const char *val) {
+  Variable *v = find_macro(name);
+  if (!v) {
+    if (g_macros_count >= MAX_MACROS)
+      return;
+    v = &g_macros[g_macros_count++];
+    snprintf(v->name, MAX_MACRO_NAME, "%s", name);
+  }
+  snprintf(v->value, MAX_MACRO_VAL, "%s", val);
 }
 
 void ducky_set_var(const char *name, const char *val) {
@@ -229,6 +254,7 @@ static int load_script(const char *filename, Script *s) {
   }
   s->lines = malloc(sizeof(char *) * MAX_LINES);
   s->count = 0;
+  s->type_string = 0;
   char buf[MAX_LINE_LEN];
   while (fgets(buf, sizeof(buf), fp) && s->count < MAX_LINES) {
     rtrim(buf);
@@ -322,9 +348,24 @@ static char *substitute_vars(const char *line) {
       changed = 1;
     }
   }
+
+  //TODO substitute macros outside this function
+  // here we only replace macros found
   for (char *c = res; *c; c++)
-    if (*c == '#')
+  {
+    if (*c != '#')
+      continue;
+
+    char name[MAX_MACRO_NAME];
+    const char *p = c + 1;
+    int i = 0;
+    while (*p && (isalnum(*p) || *p == '_') && i < MAX_MACRO_NAME - 1)
+      name[i++] = *p++;
+    name[i] = '\0';
+    if (find_macro(name) != NULL)
       *c = '$';
+  }
+
   return res;
 }
 
@@ -422,17 +463,43 @@ static int exec_line(Script *s, int pc) {
   // No early substitution. Print raw line for debugging.
   fprintf(stderr, "[Ducky] %d: %s\n", pc + 1, line);
 
-  if (strncmp(line, "STRING ", 7) == 0 || strncmp(line, "STRINGLN ", 9) == 0) {
+  //TODO enum
+  int type_string = 0;
+
+  if (strncmp(line, "STRING", 6) == 0) {
+    // single
+    if (line[6] == ' ') {
+      type_string = 1;
+    } else if (strncmp(line+6, "LN ", 3) == 0) {
+      type_string = 2;
+    // block
+    } else if (line[6] == '\0') {
+      s->type_string = 3;
+    } else if (strncmp(line+6, "LN", 3) == 0) {
+      s->type_string = 4;
+    }
+  }
+
+  if (type_string > 0 || s->type_string > 0) {
     char *sub = substitute_vars(line);
-    int ln = (sub[6] == 'L');
-    const char *t = sub + (ln ? 9 : 7);
+    const char *t = sub;
+    switch (type_string)
+    {
+      case 1:
+        t += 7;
+        break;
+      case 2:
+        t += 9;
+        break;
+    }
+
     for (const char *c = t; *c; c++) {
       char b[2] = {*c, 0};
       send_key_sequence(NULL, b);
       if (g_default_char_delay > 0)
         hid_sleep(g_default_char_delay + (rand() % (g_default_char_fuzz + 1)));
     }
-    if (ln)
+    if (type_string == 2 || s->type_string == 4)
       send_key_sequence(NULL, "ENTER");
     free(sub);
   } else if (strncmp(line, "DELAY ", 6) == 0) {
@@ -503,6 +570,20 @@ static int exec_line(Script *s, int pc) {
     char *sub = substitute_vars(line);
     printf("%s\n", sub + 5);
     free(sub);
+  } else if (strncmp(line, "DEFINE ", 7) == 0) {
+    char name[MAX_MACRO_NAME];
+    const char *p = lskip(line + 7);
+    int i = 0;
+    while (*p && (isalnum(*p) || *p == '_') && i < MAX_MACRO_NAME - 1)
+      name[i++] = *p++;
+    name[i] = '\0';
+    p = lskip(p);
+    if (*p == ' ') {
+      char *expr_raw = lskip((char *)p + 1);
+      char *expr = substitute_vars(expr_raw);
+      ducky_set_macro(name, expr);
+      free(expr);
+    }
   } else if (strncmp(line, "VAR ", 4) == 0 || line[0] == '$') {
     char name[MAX_VAR_NAME];
     const char *p = (line[0] == '$') ? line : lskip(line + 4);
@@ -599,6 +680,8 @@ static int exec_line(Script *s, int pc) {
              strncmp(line, "RETURN", 6) == 0 ||
              strncmp(line, "ENDIF", 5) == 0 ||
              strncmp(line, "END_IF", 6) == 0) { /* Handled elsewhere */
+  } else if (strncmp(line, "END_STRING", 10) == 0) {
+    s->type_string = 0;
   } else {
     char *sub = substitute_vars(line);
     // Try function call or modifiers

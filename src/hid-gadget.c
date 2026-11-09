@@ -382,8 +382,8 @@ void print_usage(const char *prog_name) {
   fprintf(stderr, "\n\x1b[1;34m[ ⌨️  KEYBOARD ]\x1b[0m\n");
   fprintf(stderr, "  \x1b[1;32mkeyboard\x1b[0m "
                   "[\x1b[1;35m--hold\x1b[0m|\x1b[1;35m--release\x1b[0m] "
-                  "[\x1b[1;33mmodifiers\x1b[0m] \x1b[1;37m<sequence>\x1b[0m\n");
-  fprintf(stderr, "  \x1b[1;30mDescription:\x1b[0m Sends text or raw key "
+                  "[\x1b[1;33mmodifiers\x1b[0m] \x1b[1;37m<sequence>|--file[=<payload>]\x1b[0m\n");
+  fprintf(stderr, "  \x1b[1;30mDescription:\x1b[0m Sends file (stdin if payload missing), text or raw key "
                   "combos to the target.\n");
   fprintf(stderr, "  \x1b[1;30mModifiers:\x1b[0m   CTRL, ALT, SHIFT, GUI "
                   "(Prefix 'R' for Right-side keys)\n");
@@ -596,7 +596,7 @@ static uint8_t char_to_hid_usage(char c, uint8_t base_modifiers,
 }
 
 /* Reusable function to send a key sequence with optional modifiers */
-int send_key_sequence(const char *modifiers_str, const char *sequence) {
+int send_key_sequence_impl(const char *modifiers_str, const char *sequence, int sleep_before_release) {
   if (!g_keyboard_device)
     return -1;
 
@@ -643,7 +643,7 @@ int send_key_sequence(const char *modifiers_str, const char *sequence) {
         report[0] = current_mods;
         report[2] = usage;
         write(fd, report, 8);
-        usleep(10000);
+        usleep(sleep_before_release);
 
         /* Release */
         report[0] = modifiers;
@@ -664,6 +664,10 @@ int send_key_sequence(const char *modifiers_str, const char *sequence) {
   return 0;
 }
 
+int send_key_sequence(const char *modifiers_str, const char *sequence) {
+  return send_key_sequence_impl(modifiers_str, sequence, 10000);
+}
+
 /* Process a keyboard sequence */
 int process_keyboard(int argc, char *argv[]) {
   int fd;
@@ -672,7 +676,9 @@ int process_keyboard(int argc, char *argv[]) {
   int hold_keys = 0;
   int release_keys = 0;
   uint8_t modifiers = 0;
-  int i, seq_start = 0;
+  FILE* fp = NULL;
+  int sleep_before_release = 10000;
+  int i = 0, seq_start = 0;
   // Default delay per key (ms), can be overridden by env HID_KEY_DELAY_MS or
   // --delay wrapper
   int key_delay_ms = 10;
@@ -694,6 +700,8 @@ int process_keyboard(int argc, char *argv[]) {
 
   static struct option long_options[] = {{"hold", no_argument, 0, 'h'},
                                          {"release", no_argument, 0, 'r'},
+                                         {"file", optional_argument, 0, 'f'},
+                                         {"sleep_before_release", required_argument, 0, 's'},
                                          {0, 0, 0, 0}};
 
   // Reset getopt for parsing within a function
@@ -702,13 +710,19 @@ int process_keyboard(int argc, char *argv[]) {
 
   /* Parse command line options specific to keyboard */
   // Note: getopt_long modifies argc/argv ordering, parse options first
-  while ((opt = getopt_long(argc, argv, "hr", long_options, NULL)) != -1) {
+  while ((opt = getopt_long(argc, argv, "hrf::s:", long_options, NULL)) != -1) {
     switch (opt) {
     case 'h':
       hold_keys = 1;
       break;
     case 'r':
       release_keys = 1;
+      break;
+    case 'f':
+      fp = optarg == NULL ? stdin : fopen(optarg, "r");
+      break;
+    case 's':
+      sleep_before_release = optarg == NULL ? 10000 : atoi(optarg);
       break;
     // Handle '?' or ':' for unknown options or missing arguments if needed
     case '?':
@@ -768,6 +782,28 @@ int process_keyboard(int argc, char *argv[]) {
               strerror(errno));
       return EXIT_FAILURE;
     }
+  } else if (fp != NULL) {
+    size_t MAX_LINE_LEN = 1024*1024;
+    char* buf = malloc(MAX_LINE_LEN);;
+    //int bytes_read = 0;
+    while (getline(&buf, &MAX_LINE_LEN, fp) > 0) {
+      // No early substitution. Print raw line for debugging.
+      fprintf(stderr, "[KEYBOARD] %d: %s\n", i++, buf);
+
+      send_key_sequence_impl(NULL, buf, sleep_before_release);
+    }
+    if (ferror(fp)) {
+      fprintf(stderr, "A reading error occurred: %s\n",
+              strerror(errno));
+    } else if (feof(fp)) {
+      fprintf(stderr, "Reached the end of the file/stream: %s\n",
+              strerror(errno));
+    } else
+      fprintf(stderr, "Didnt reached the end: %s\n",
+              strerror(errno));
+    free(buf);
+    if (fp != stdin)
+      fclose(fp);
   } else if (sequence != NULL) {
     /* We already have the sequence from the modifier check or next arg */
     int seq_len = strlen(sequence);
@@ -872,7 +908,7 @@ int process_keyboard(int argc, char *argv[]) {
     }
   } else {
     // No sequence, no --release, no modifiers specified
-    fprintf(stderr, "Error: Keyboard command requires a sequence, --release, "
+    fprintf(stderr, "Error: Keyboard command requires a file, a sequence, --release, "
                     "or modifiers.\n");
     return EXIT_FAILURE;
   }
