@@ -10,6 +10,9 @@
 
 #define MAX_LINE_LEN 1024
 #define MAX_LINES 2048
+#define MAX_MACROS 128
+#define MAX_MACRO_NAME 128
+#define MAX_MACRO_VAL 1024
 #define MAX_VARS 128
 #define MAX_VAR_NAME 64
 #define MAX_VAR_VAL 256
@@ -39,6 +42,8 @@ typedef struct {
   int count;
 } Script;
 
+static Variable g_macros[MAX_MACROS];
+static int g_macros_count = 0;
 static Variable g_vars[MAX_VARS];
 static int g_var_count = 0;
 static Function g_functions[MAX_FUNCTIONS];
@@ -105,12 +110,31 @@ static char *lskip(const char *s) {
   return (char *)s;
 }
 
+static Variable *find_macro(const char *name) {
+  for (int i = 0; i < g_macros_count; i++) {
+    if (strcmp(g_macros[i].name, name) == 0)
+      return &g_macros[i];
+  }
+  return NULL;
+}
+
 static Variable *find_var(const char *name) {
   for (int i = 0; i < g_var_count; i++) {
     if (strcmp(g_vars[i].name, name) == 0)
       return &g_vars[i];
   }
   return NULL;
+}
+
+void ducky_set_macro(const char *name, const char *val) {
+  Variable *v = find_macro(name);
+  if (!v) {
+    if (g_macros_count >= MAX_MACROS)
+      return;
+    v = &g_macros[g_macros_count++];
+    snprintf(v->name, MAX_MACRO_NAME, "%s", name);
+  }
+  snprintf(v->value, MAX_MACRO_VAL, "%s", val);
 }
 
 void ducky_set_var(const char *name, const char *val) {
@@ -322,9 +346,24 @@ static char *substitute_vars(const char *line) {
       changed = 1;
     }
   }
+
+  //TODO substitute macros outside this function
+  // here we only replace macros found
   for (char *c = res; *c; c++)
-    if (*c == '#')
+  {
+    if (*c != '#')
+      continue;
+
+    char name[MAX_MACRO_NAME];
+    const char *p = c + 1;
+    int i = 0;
+    while (*p && (isalnum(*p) || *p == '_') && i < MAX_MACRO_NAME - 1)
+      name[i++] = *p++;
+    name[i] = '\0';
+    if (find_macro(name) != NULL)
       *c = '$';
+  }
+
   return res;
 }
 
@@ -503,6 +542,20 @@ static int exec_line(Script *s, int pc) {
     char *sub = substitute_vars(line);
     printf("%s\n", sub + 5);
     free(sub);
+  } else if (strncmp(line, "DEFINE ", 7) == 0) {
+    char name[MAX_MACRO_NAME];
+    const char *p = lskip(line + 7);
+    int i = 0;
+    while (*p && (isalnum(*p) || *p == '_') && i < MAX_MACRO_NAME - 1)
+      name[i++] = *p++;
+    name[i] = '\0';
+    p = lskip(p);
+    if (*p == ' ') {
+      char *expr_raw = lskip((char *)p + 1);
+      char *expr = substitute_vars(expr_raw);
+      ducky_set_macro(name, expr);
+      free(expr);
+    }
   } else if (strncmp(line, "VAR ", 4) == 0 || line[0] == '$') {
     char name[MAX_VAR_NAME];
     const char *p = (line[0] == '$') ? line : lskip(line + 4);
