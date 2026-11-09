@@ -382,8 +382,8 @@ void print_usage(const char *prog_name) {
   fprintf(stderr, "\n\x1b[1;34m[ ⌨️  KEYBOARD ]\x1b[0m\n");
   fprintf(stderr, "  \x1b[1;32mkeyboard\x1b[0m "
                   "[\x1b[1;35m--hold\x1b[0m|\x1b[1;35m--release\x1b[0m] "
-                  "[\x1b[1;33mmodifiers\x1b[0m] \x1b[1;37m<sequence>\x1b[0m\n");
-  fprintf(stderr, "  \x1b[1;30mDescription:\x1b[0m Sends text or raw key "
+                  "[\x1b[1;33mmodifiers\x1b[0m] \x1b[1;37m<sequence>|--file[=<payload>]\x1b[0m\n");
+  fprintf(stderr, "  \x1b[1;30mDescription:\x1b[0m Sends file (stdin if payload missing), text or raw key "
                   "combos to the target.\n");
   fprintf(stderr, "  \x1b[1;30mModifiers:\x1b[0m   CTRL, ALT, SHIFT, GUI "
                   "(Prefix 'R' for Right-side keys)\n");
