@@ -678,7 +678,7 @@ int process_keyboard(int argc, char *argv[]) {
   uint8_t modifiers = 0;
   FILE* fp = NULL;
   int sleep_before_release = 10000;
-  int i, seq_start = 0;
+  int i = 0, seq_start = 0;
   // Default delay per key (ms), can be overridden by env HID_KEY_DELAY_MS or
   // --delay wrapper
   int key_delay_ms = 10;
@@ -710,7 +710,7 @@ int process_keyboard(int argc, char *argv[]) {
 
   /* Parse command line options specific to keyboard */
   // Note: getopt_long modifies argc/argv ordering, parse options first
-  while ((opt = getopt_long(argc, argv, "hrf:", long_options, NULL)) != -1) {
+  while ((opt = getopt_long(argc, argv, "hrf::s:", long_options, NULL)) != -1) {
     switch (opt) {
     case 'h':
       hold_keys = 1;
@@ -783,11 +783,25 @@ int process_keyboard(int argc, char *argv[]) {
       return EXIT_FAILURE;
     }
   } else if (fp != NULL) {
-    #define MAX_LINE_LEN 4096
-    char buf[MAX_LINE_LEN];
-    while (fgets(buf, sizeof(buf), fp)) {
+    size_t MAX_LINE_LEN = 1024*1024;
+    char* buf = malloc(MAX_LINE_LEN);;
+    //int bytes_read = 0;
+    while (getline(&buf, &MAX_LINE_LEN, fp) > 0) {
+      // No early substitution. Print raw line for debugging.
+      fprintf(stderr, "[KEYBOARD] %d: %s\n", i++, buf);
+
       send_key_sequence_impl(NULL, buf, sleep_before_release);
     }
+    if (ferror(fp)) {
+      fprintf(stderr, "A reading error occurred: %s\n",
+              strerror(errno));
+    } else if (feof(fp)) {
+      fprintf(stderr, "Reached the end of the file/stream: %s\n",
+              strerror(errno));
+    } else
+      fprintf(stderr, "Didnt reached the end: %s\n",
+              strerror(errno));
+    free(buf);
     if (fp != stdin)
       fclose(fp);
   } else if (sequence != NULL) {
