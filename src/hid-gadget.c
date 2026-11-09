@@ -596,7 +596,7 @@ static uint8_t char_to_hid_usage(char c, uint8_t base_modifiers,
 }
 
 /* Reusable function to send a key sequence with optional modifiers */
-int send_key_sequence(const char *modifiers_str, const char *sequence) {
+int send_key_sequence_impl(const char *modifiers_str, const char *sequence, int sleep_before_release) {
   if (!g_keyboard_device)
     return -1;
 
@@ -643,7 +643,7 @@ int send_key_sequence(const char *modifiers_str, const char *sequence) {
         report[0] = current_mods;
         report[2] = usage;
         write(fd, report, 8);
-        usleep(10000);
+        usleep(sleep_before_release);
 
         /* Release */
         report[0] = modifiers;
@@ -664,6 +664,10 @@ int send_key_sequence(const char *modifiers_str, const char *sequence) {
   return 0;
 }
 
+int send_key_sequence(const char *modifiers_str, const char *sequence) {
+  return send_key_sequence_impl(modifiers_str, sequence, 10000);
+}
+
 /* Process a keyboard sequence */
 int process_keyboard(int argc, char *argv[]) {
   int fd;
@@ -673,6 +677,7 @@ int process_keyboard(int argc, char *argv[]) {
   int release_keys = 0;
   uint8_t modifiers = 0;
   FILE* fp = NULL;
+  int sleep_before_release = 10000;
   int i, seq_start = 0;
   // Default delay per key (ms), can be overridden by env HID_KEY_DELAY_MS or
   // --delay wrapper
@@ -696,6 +701,7 @@ int process_keyboard(int argc, char *argv[]) {
   static struct option long_options[] = {{"hold", no_argument, 0, 'h'},
                                          {"release", no_argument, 0, 'r'},
                                          {"file", optional_argument, 0, 'f'},
+                                         {"sleep_before_release", required_argument, 0, 's'},
                                          {0, 0, 0, 0}};
 
   // Reset getopt for parsing within a function
@@ -714,6 +720,9 @@ int process_keyboard(int argc, char *argv[]) {
       break;
     case 'f':
       fp = optarg == NULL ? stdin : fopen(optarg, "r");
+      break;
+    case 's':
+      sleep_before_release = optarg == NULL ? 10000 : atoi(optarg);
       break;
     // Handle '?' or ':' for unknown options or missing arguments if needed
     case '?':
@@ -777,7 +786,7 @@ int process_keyboard(int argc, char *argv[]) {
     #define MAX_LINE_LEN 4096
     char buf[MAX_LINE_LEN];
     while (fgets(buf, sizeof(buf), fp)) {
-      send_key_sequence(NULL, buf);
+      send_key_sequence_impl(NULL, buf, sleep_before_release);
     }
     if (fp != stdin)
       fclose(fp);
