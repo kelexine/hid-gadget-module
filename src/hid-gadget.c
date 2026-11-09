@@ -672,6 +672,7 @@ int process_keyboard(int argc, char *argv[]) {
   int hold_keys = 0;
   int release_keys = 0;
   uint8_t modifiers = 0;
+  FILE* fp = NULL;
   int i, seq_start = 0;
   // Default delay per key (ms), can be overridden by env HID_KEY_DELAY_MS or
   // --delay wrapper
@@ -694,6 +695,7 @@ int process_keyboard(int argc, char *argv[]) {
 
   static struct option long_options[] = {{"hold", no_argument, 0, 'h'},
                                          {"release", no_argument, 0, 'r'},
+                                         {"file", optional_argument, 0, 'f'},
                                          {0, 0, 0, 0}};
 
   // Reset getopt for parsing within a function
@@ -702,13 +704,16 @@ int process_keyboard(int argc, char *argv[]) {
 
   /* Parse command line options specific to keyboard */
   // Note: getopt_long modifies argc/argv ordering, parse options first
-  while ((opt = getopt_long(argc, argv, "hr", long_options, NULL)) != -1) {
+  while ((opt = getopt_long(argc, argv, "hrf:", long_options, NULL)) != -1) {
     switch (opt) {
     case 'h':
       hold_keys = 1;
       break;
     case 'r':
       release_keys = 1;
+      break;
+    case 'f':
+      fp = optarg == NULL ? stdin : fopen(optarg, "r");
       break;
     // Handle '?' or ':' for unknown options or missing arguments if needed
     case '?':
@@ -768,6 +773,14 @@ int process_keyboard(int argc, char *argv[]) {
               strerror(errno));
       return EXIT_FAILURE;
     }
+  } else if (fp != NULL) {
+    #define MAX_LINE_LEN 4096
+    char buf[MAX_LINE_LEN];
+    while (fgets(buf, sizeof(buf), fp)) {
+      send_key_sequence(NULL, buf);
+    }
+    if (fp != stdin)
+      fclose(fp);
   } else if (sequence != NULL) {
     /* We already have the sequence from the modifier check or next arg */
     int seq_len = strlen(sequence);
@@ -872,7 +885,7 @@ int process_keyboard(int argc, char *argv[]) {
     }
   } else {
     // No sequence, no --release, no modifiers specified
-    fprintf(stderr, "Error: Keyboard command requires a sequence, --release, "
+    fprintf(stderr, "Error: Keyboard command requires a file, a sequence, --release, "
                     "or modifiers.\n");
     return EXIT_FAILURE;
   }
