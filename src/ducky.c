@@ -40,6 +40,7 @@ typedef struct {
 typedef struct {
   char **lines;
   int count;
+  int type_string;
 } Script;
 
 static Variable g_macros[MAX_MACROS];
@@ -253,6 +254,7 @@ static int load_script(const char *filename, Script *s) {
   }
   s->lines = malloc(sizeof(char *) * MAX_LINES);
   s->count = 0;
+  s->type_string = 0;
   char buf[MAX_LINE_LEN];
   while (fgets(buf, sizeof(buf), fp) && s->count < MAX_LINES) {
     rtrim(buf);
@@ -461,17 +463,43 @@ static int exec_line(Script *s, int pc) {
   // No early substitution. Print raw line for debugging.
   fprintf(stderr, "[Ducky] %d: %s\n", pc + 1, line);
 
-  if (strncmp(line, "STRING ", 7) == 0 || strncmp(line, "STRINGLN ", 9) == 0) {
+  //TODO enum
+  int type_string = 0;
+
+  if (strncmp(line, "STRING", 6) == 0) {
+    // single
+    if (line[6] == ' ') {
+      type_string = 1;
+    } else if (strncmp(line+6, "LN ", 3) == 0) {
+      type_string = 2;
+    // block
+    } else if (line[6] == '\0') {
+      s->type_string = 3;
+    } else if (strncmp(line+6, "LN", 3) == 0) {
+      s->type_string = 4;
+    }
+  }
+
+  if (type_string > 0 || s->type_string > 0) {
     char *sub = substitute_vars(line);
-    int ln = (sub[6] == 'L');
-    const char *t = sub + (ln ? 9 : 7);
+    const char *t = sub;
+    switch (type_string)
+    {
+      case 1:
+        t += 7;
+        break;
+      case 2:
+        t += 9;
+        break;
+    }
+
     for (const char *c = t; *c; c++) {
       char b[2] = {*c, 0};
       send_key_sequence(NULL, b);
       if (g_default_char_delay > 0)
         hid_sleep(g_default_char_delay + (rand() % (g_default_char_fuzz + 1)));
     }
-    if (ln)
+    if (type_string == 2 || s->type_string == 4)
       send_key_sequence(NULL, "ENTER");
     free(sub);
   } else if (strncmp(line, "DELAY ", 6) == 0) {
@@ -652,6 +680,8 @@ static int exec_line(Script *s, int pc) {
              strncmp(line, "RETURN", 6) == 0 ||
              strncmp(line, "ENDIF", 5) == 0 ||
              strncmp(line, "END_IF", 6) == 0) { /* Handled elsewhere */
+  } else if (strncmp(line, "END_STRING", 10) == 0) {
+    s->type_string = 0;
   } else {
     char *sub = substitute_vars(line);
     // Try function call or modifiers
